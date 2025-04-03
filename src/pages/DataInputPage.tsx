@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, FileText, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import Papa from "papaparse";
 
 interface Recipient {
@@ -20,6 +21,26 @@ export default function DataInputPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [csvError, setCsvError] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Load recipients from localStorage if available
+    const savedRecipients = localStorage.getItem("lovable.dev.recipients");
+    if (savedRecipients) {
+      try {
+        setRecipients(JSON.parse(savedRecipients));
+      } catch (e) {
+        console.error("Error loading saved recipients:", e);
+      }
+    }
+  }, []);
+
+  // Save recipients to localStorage whenever they change
+  useEffect(() => {
+    if (recipients.length > 0) {
+      localStorage.setItem("lovable.dev.recipients", JSON.stringify(recipients));
+    }
+  }, [recipients]);
 
   const handleAddRecipient = () => {
     if (name.trim() === "") {
@@ -93,6 +114,7 @@ export default function DataInputPage() {
     
     if (confirm(`Are you sure you want to remove all ${recipients.length} recipients?`)) {
       setRecipients([]);
+      localStorage.removeItem("lovable.dev.recipients");
       toast("All recipients removed");
     }
   };
@@ -104,6 +126,10 @@ export default function DataInputPage() {
     link.href = URL.createObjectURL(blob);
     link.download = "certificate_recipients_sample.csv";
     link.click();
+  };
+
+  const goToTextSettings = () => {
+    navigate("/text-settings");
   };
 
   return (
@@ -260,8 +286,8 @@ export default function DataInputPage() {
           
           {recipients.length > 0 && (
             <div className="mt-4 flex justify-end">
-              <Button asChild>
-                <a href="/text-settings">Next: Text Settings</a>
+              <Button onClick={goToTextSettings}>
+                Next: Text Settings
               </Button>
             </div>
           )}

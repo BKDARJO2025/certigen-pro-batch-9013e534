@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { UploadCloud, X, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 export default function TemplatesPage() {
   const [templateImage, setTemplateImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const navigate = useNavigate();
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -37,17 +39,26 @@ export default function TemplatesPage() {
   };
 
   const handleFileUpload = (file: File) => {
-    const validImageTypes = ['image/jpeg', 'image/png'];
+    const validImageTypes = ['image/jpeg', 'image/png', 'image/svg+xml', 'image/gif'];
     
     if (!validImageTypes.includes(file.type)) {
-      toast.error("Please upload a valid image file (JPG or PNG)");
+      toast.error("Please upload a valid image file (JPG, PNG, SVG, or GIF)");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File size exceeds 10MB limit");
       return;
     }
 
     const reader = new FileReader();
     reader.onload = (e) => {
       if (e.target?.result) {
-        setTemplateImage(e.target.result as string);
+        const imageData = e.target.result as string;
+        setTemplateImage(imageData);
+        
+        // Save to localStorage
+        localStorage.setItem("lovable.dev.currentTemplate", imageData);
         toast.success("Template uploaded successfully!");
       }
     };
@@ -56,8 +67,21 @@ export default function TemplatesPage() {
 
   const handleRemoveTemplate = () => {
     setTemplateImage(null);
+    localStorage.removeItem("lovable.dev.currentTemplate");
     toast("Template removed");
   };
+
+  const goToDataInput = () => {
+    navigate("/data-input");
+  };
+
+  // Load template from localStorage on component mount
+  useState(() => {
+    const savedTemplate = localStorage.getItem("lovable.dev.currentTemplate");
+    if (savedTemplate) {
+      setTemplateImage(savedTemplate);
+    }
+  });
 
   return (
     <div className="container mx-auto py-6">
@@ -88,13 +112,13 @@ export default function TemplatesPage() {
                         <input
                           type="file"
                           className="hidden"
-                          accept="image/png, image/jpeg"
+                          accept="image/png, image/jpeg, image/svg+xml, image/gif"
                           onChange={handleFileChange}
                         />
                       </label>
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      Supports: JPG, PNG (Max 10MB)
+                      Supports: JPG, PNG, SVG, GIF (Max 10MB)
                     </p>
                   </div>
                 ) : (
@@ -126,8 +150,8 @@ export default function TemplatesPage() {
                   Add Text Elements
                 </a>
               </Button>
-              <Button asChild>
-                <a href="/data-input">Next: Data Input</a>
+              <Button onClick={goToDataInput}>
+                Next: Data Input
               </Button>
             </div>
           )}

@@ -1,7 +1,8 @@
 
-import { FileImage, UploadCloud, Type, Users, Download, Settings, Menu } from "lucide-react";
+import { FileImage, Users, Type, Download, Settings, Menu, UploadCloud, File } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Sidebar,
   SidebarContent,
@@ -11,7 +12,28 @@ import {
 } from "@/components/ui/sidebar";
 
 export default function AppSidebar() {
-  const navItems = [
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  
+  const adminNavItems = [
+    {
+      name: "Users",
+      icon: <Users className="w-5 h-5" />,
+      path: "/admin/users",
+    },
+    {
+      name: "Templates",
+      icon: <FileImage className="w-5 h-5" />,
+      path: "/admin/templates",
+    },
+    {
+      name: "Settings",
+      icon: <Settings className="w-5 h-5" />,
+      path: "/admin/settings",
+    },
+  ];
+
+  const appNavItems = [
     {
       name: "Templates",
       icon: <FileImage className="w-5 h-5" />,
@@ -38,6 +60,8 @@ export default function AppSidebar() {
       path: "/settings",
     },
   ];
+
+  const navItems = isAdmin ? adminNavItems : appNavItems;
 
   return (
     <Sidebar collapsible="icon">
