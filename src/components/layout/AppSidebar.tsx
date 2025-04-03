@@ -54,11 +54,6 @@ export default function AppSidebar() {
       icon: <Download className="w-5 h-5" />,
       path: "/export",
     },
-    {
-      name: "Settings",
-      icon: <Settings className="w-5 h-5" />,
-      path: "/settings",
-    },
   ];
 
   const navItems = isAdmin ? adminNavItems : appNavItems;

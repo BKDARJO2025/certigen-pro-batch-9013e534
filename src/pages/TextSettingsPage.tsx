@@ -1,5 +1,5 @@
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, AlignLeft, AlignCenter, AlignRight, Bold, Italic } from "lucide-react";
 import Draggable from "react-draggable";
 
 interface TextElement {
@@ -24,6 +24,9 @@ interface TextElement {
   color: string;
   type: "static" | "dynamic";
   dynamicField?: "name" | "description" | "date";
+  fontWeight?: "normal" | "bold";
+  fontStyle?: "normal" | "italic";
+  alignment?: "left" | "center" | "right";
 }
 
 const fontFamilies = [
@@ -32,20 +35,72 @@ const fontFamilies = [
   { value: "serif", label: "Serif" },
   { value: "sans-serif", label: "Sans Serif" },
   { value: "monospace", label: "Monospace" },
+  { value: "georgia", label: "Georgia" },
+  { value: "times", label: "Times New Roman" },
+  { value: "arial", label: "Arial" },
 ];
 
 const fontSizes = Array.from({ length: 25 }, (_, i) => 12 + i * 2);
+
+// Professional text presets
+const textPresets = [
+  { id: "preset-1", name: "Certificate Title", content: "Certificate of Achievement", type: "static", fontSize: 42, fontFamily: "georgia", alignment: "center" },
+  { id: "preset-2", name: "Recipient Name", content: "[Recipient Name]", type: "dynamic", dynamicField: "name", fontSize: 36, fontFamily: "montserrat", alignment: "center" },
+  { id: "preset-3", name: "Description", content: "[Description]", type: "dynamic", dynamicField: "description", fontSize: 18, fontFamily: "serif", alignment: "center" },
+  { id: "preset-4", name: "Date", content: "[Current Date]", type: "dynamic", dynamicField: "date", fontSize: 16, fontFamily: "sans-serif", alignment: "center" },
+  { id: "preset-5", name: "Signature Line", content: "________________________", type: "static", fontSize: 24, fontFamily: "serif", alignment: "center" },
+  { id: "preset-6", name: "Signatory Title", content: "CEO & Founder", type: "static", fontSize: 16, fontFamily: "serif", alignment: "center" },
+];
 
 export default function TextSettingsPage() {
   const [elements, setElements] = useState<TextElement[]>([]);
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   
-  // Mock template - in a real app, this would come from context/state
-  const templateImage = "/placeholder.svg";
+  // Get template from localStorage
+  const [templateImage, setTemplateImage] = useState<string | null>(null);
   
   // Canvas ref for positioning
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  // Load template and any saved elements
+  useEffect(() => {
+    const savedTemplate = localStorage.getItem("lovable.dev.currentTemplate");
+    if (savedTemplate) {
+      setTemplateImage(savedTemplate);
+      setImageLoaded(true);
+    }
+
+    // Load saved text elements if any
+    const savedElements = localStorage.getItem("lovable.dev.textElements");
+    if (savedElements) {
+      setElements(JSON.parse(savedElements));
+    } else if (canvasRef.current) {
+      // Add default professional elements if none exist
+      const defaultElements = textPresets.map((preset, index) => ({
+        id: Date.now() + index.toString(),
+        content: preset.content,
+        x: canvasRef.current.clientWidth / 2 - 150,
+        y: 100 + (index * 60),
+        fontSize: preset.fontSize,
+        fontFamily: preset.fontFamily,
+        color: "#000000",
+        type: preset.type as "static" | "dynamic",
+        dynamicField: preset.type === "dynamic" ? preset.dynamicField as "name" | "description" | "date" : undefined,
+        alignment: preset.alignment as "left" | "center" | "right",
+        fontWeight: "normal" as "normal" | "bold",
+        fontStyle: "normal" as "normal" | "italic",
+      }));
+      setElements(defaultElements);
+    }
+  }, []);
+
+  // Save elements to localStorage whenever they change
+  useEffect(() => {
+    if (elements.length > 0) {
+      localStorage.setItem("lovable.dev.textElements", JSON.stringify(elements));
+    }
+  }, [elements]);
 
   const handleAddElement = (type: "static" | "dynamic") => {
     if (!canvasRef.current) return;
@@ -59,12 +114,41 @@ export default function TextSettingsPage() {
       fontFamily: "montserrat",
       color: "#000000",
       type,
-      dynamicField: type === "dynamic" ? "name" : undefined
+      dynamicField: type === "dynamic" ? "name" : undefined,
+      alignment: "left",
+      fontWeight: "normal",
+      fontStyle: "normal",
     };
     
     setElements([...elements, newElement]);
     setSelectedElement(newElement.id);
     toast.success(`${type === "static" ? "Static" : "Dynamic"} text element added`);
+  };
+
+  const handleAddPresetElement = (presetId: string) => {
+    if (!canvasRef.current) return;
+    
+    const preset = textPresets.find(p => p.id === presetId);
+    if (!preset) return;
+    
+    const newElement: TextElement = {
+      id: Date.now().toString(),
+      content: preset.content,
+      x: canvasRef.current.clientWidth / 2 - 150,
+      y: canvasRef.current.clientHeight / 2 - 20,
+      fontSize: preset.fontSize,
+      fontFamily: preset.fontFamily,
+      color: "#000000",
+      type: preset.type as "static" | "dynamic",
+      dynamicField: preset.type === "dynamic" ? preset.dynamicField as "name" | "description" | "date" : undefined,
+      alignment: preset.alignment as "left" | "center" | "right",
+      fontWeight: "normal",
+      fontStyle: "normal",
+    };
+    
+    setElements([...elements, newElement]);
+    setSelectedElement(newElement.id);
+    toast.success(`${preset.name} element added`);
   };
 
   const handleElementSelect = (id: string) => {
@@ -98,6 +182,15 @@ export default function TextSettingsPage() {
     ? elements.find(el => el.id === selectedElement) 
     : null;
 
+  // Style for text alignment
+  const getTextAlignStyle = (alignment?: string) => {
+    switch(alignment) {
+      case 'center': return { textAlign: 'center' as const, width: '100%' };
+      case 'right': return { textAlign: 'right' as const, width: '100%' };
+      default: return { textAlign: 'left' as const };
+    }
+  };
+
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
@@ -109,15 +202,30 @@ export default function TextSettingsPage() {
         <div className="lg:col-span-2">
           <Card className="mb-4">
             <CardContent className="p-6">
-              <div className="flex justify-between mb-4">
-                <Button variant="outline" onClick={() => handleAddElement("static")}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Static Text
-                </Button>
-                <Button onClick={() => handleAddElement("dynamic")}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Dynamic Field
-                </Button>
+              <div className="flex justify-between mb-4 flex-wrap gap-2">
+                <div className="space-x-2">
+                  <Button variant="outline" onClick={() => handleAddElement("static")}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Static Text
+                  </Button>
+                  <Button onClick={() => handleAddElement("dynamic")}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Dynamic Field
+                  </Button>
+                </div>
+                
+                <Select
+                  onValueChange={(value) => handleAddPresetElement(value)}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Add preset text" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {textPresets.map(preset => (
+                      <SelectItem key={preset.id} value={preset.id}>{preset.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               <div 
@@ -126,13 +234,20 @@ export default function TextSettingsPage() {
                 style={{ 
                   width: "100%", 
                   height: "500px",
-                  backgroundImage: `url(${templateImage})`,
+                  backgroundImage: templateImage ? `url(${templateImage})` : "none",
                   backgroundSize: "contain",
                   backgroundPosition: "center",
-                  backgroundRepeat: "no-repeat"
+                  backgroundRepeat: "no-repeat",
+                  position: "relative"
                 }}
                 onClick={() => setSelectedElement(null)}
               >
+                {!templateImage && (
+                  <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                    No template selected. Please upload a template first.
+                  </div>
+                )}
+                
                 {elements.map(element => (
                   <Draggable
                     key={element.id}
@@ -141,7 +256,7 @@ export default function TextSettingsPage() {
                     bounds="parent"
                   >
                     <div
-                      className={`text-element ${selectedElement === element.id ? 'text-element-active' : ''}`}
+                      className={`text-element cursor-move ${selectedElement === element.id ? 'ring-2 ring-certigen-blue p-1' : ''}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleElementSelect(element.id);
@@ -149,7 +264,11 @@ export default function TextSettingsPage() {
                       style={{
                         fontSize: `${element.fontSize}px`,
                         fontFamily: element.fontFamily,
-                        color: element.color
+                        color: element.color,
+                        fontWeight: element.fontWeight,
+                        fontStyle: element.fontStyle,
+                        position: 'absolute',
+                        ...getTextAlignStyle(element.alignment)
                       }}
                     >
                       {element.content}
@@ -265,6 +384,58 @@ export default function TextSettingsPage() {
                         onChange={(e) => handlePropertyChange("color", e.target.value)}
                         className="flex-1 ml-2"
                       />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Alignment</label>
+                    <div className="flex space-x-2">
+                      <Button 
+                        type="button" 
+                        variant={activeElement.alignment === "left" ? "default" : "outline"}
+                        size="icon"
+                        onClick={() => handlePropertyChange("alignment", "left")}
+                      >
+                        <AlignLeft className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant={activeElement.alignment === "center" ? "default" : "outline"}
+                        size="icon"
+                        onClick={() => handlePropertyChange("alignment", "center")}
+                      >
+                        <AlignCenter className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant={activeElement.alignment === "right" ? "default" : "outline"}
+                        size="icon"
+                        onClick={() => handlePropertyChange("alignment", "right")}
+                      >
+                        <AlignRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Style</label>
+                    <div className="flex space-x-2">
+                      <Button 
+                        type="button" 
+                        variant={activeElement.fontWeight === "bold" ? "default" : "outline"}
+                        size="icon"
+                        onClick={() => handlePropertyChange("fontWeight", activeElement.fontWeight === "bold" ? "normal" : "bold")}
+                      >
+                        <Bold className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant={activeElement.fontStyle === "italic" ? "default" : "outline"}
+                        size="icon"
+                        onClick={() => handlePropertyChange("fontStyle", activeElement.fontStyle === "italic" ? "normal" : "italic")}
+                      >
+                        <Italic className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                   

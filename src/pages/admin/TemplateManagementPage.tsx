@@ -2,6 +2,12 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useNavigate } from "react-router-dom";
 
 interface Template {
   id: string;
@@ -13,6 +19,11 @@ interface Template {
 
 export default function TemplateManagementPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState<boolean>(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [editName, setEditName] = useState<string>("");
+  const [editStatus, setEditStatus] = useState<"active" | "inactive">("active");
+  const navigate = useNavigate();
   
   useEffect(() => {
     // Load templates from localStorage or initialize with mock data
@@ -49,12 +60,54 @@ export default function TemplateManagementPage() {
       localStorage.setItem("lovable.dev.templates", JSON.stringify(mockTemplates));
     }
   }, []);
+
+  const saveTemplates = (updatedTemplates: Template[]) => {
+    setTemplates(updatedTemplates);
+    localStorage.setItem("lovable.dev.templates", JSON.stringify(updatedTemplates));
+  };
+
+  const handleCreateTemplate = () => {
+    navigate("/templates");
+  };
+
+  const handleEditTemplate = (template: Template) => {
+    setSelectedTemplate(template);
+    setEditName(template.name);
+    setEditStatus(template.status);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDeleteTemplate = (templateId: string) => {
+    const updatedTemplates = templates.filter(t => t.id !== templateId);
+    saveTemplates(updatedTemplates);
+    toast.success("Template deleted successfully");
+  };
+
+  const handleSaveEdit = () => {
+    if (!selectedTemplate) return;
+    
+    const updatedTemplates = templates.map(t => 
+      t.id === selectedTemplate.id 
+        ? { ...t, name: editName, status: editStatus }
+        : t
+    );
+    
+    saveTemplates(updatedTemplates);
+    setIsEditDialogOpen(false);
+    toast.success("Template updated successfully");
+  };
+
+  const handleUseTemplate = (template: Template) => {
+    localStorage.setItem("lovable.dev.currentTemplate", template.thumbnail);
+    toast.success(`Template "${template.name}" set as current template`);
+    navigate("/text-settings");
+  };
   
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold">Template Management</h2>
-        <Button>Create New Template</Button>
+        <Button onClick={handleCreateTemplate}>Create New Template</Button>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -64,7 +117,8 @@ export default function TemplateManagementPage() {
               <img 
                 src={template.thumbnail} 
                 alt={template.name}
-                className="w-full h-full object-contain"
+                className="w-full h-full object-contain cursor-pointer"
+                onClick={() => handleUseTemplate(template)}
               />
             </div>
             <CardContent className="pt-4">
@@ -84,13 +138,75 @@ export default function TemplateManagementPage() {
                 </span>
               </div>
               <div className="flex gap-2 mt-4">
-                <Button size="sm" variant="outline" className="flex-1">Edit</Button>
-                <Button size="sm" variant="destructive" className="flex-1">Delete</Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => handleEditTemplate(template)}
+                >
+                  Edit
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="destructive" 
+                  className="flex-1"
+                  onClick={() => handleDeleteTemplate(template.id)}
+                >
+                  Delete
+                </Button>
               </div>
+              <Button 
+                size="sm" 
+                className="w-full mt-2"
+                onClick={() => handleUseTemplate(template)}
+              >
+                Use Template
+              </Button>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Template</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Template Name</Label>
+              <Input
+                id="name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={editStatus}
+                onValueChange={(value: "active" | "inactive") => setEditStatus(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

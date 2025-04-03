@@ -1,15 +1,37 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { UploadCloud, X, ExternalLink } from "lucide-react";
+import { UploadCloud, X, ExternalLink, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+
+interface SavedTemplate {
+  id: string;
+  name: string;
+  image: string;
+  createdAt: string;
+}
 
 export default function TemplatesPage() {
   const [templateImage, setTemplateImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [savedTemplates, setSavedTemplates] = useState<SavedTemplate[]>([]);
+  const [templateName, setTemplateName] = useState<string>("My Certificate Template");
   const navigate = useNavigate();
+
+  // Load saved templates and current template
+  useEffect(() => {
+    const savedTemplate = localStorage.getItem("lovable.dev.currentTemplate");
+    if (savedTemplate) {
+      setTemplateImage(savedTemplate);
+    }
+    
+    const templates = localStorage.getItem("lovable.dev.savedTemplates");
+    if (templates) {
+      setSavedTemplates(JSON.parse(templates));
+    }
+  }, []);
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -71,17 +93,58 @@ export default function TemplatesPage() {
     toast("Template removed");
   };
 
+  const handleSaveTemplate = () => {
+    if (!templateImage) {
+      toast.error("Please upload a template first");
+      return;
+    }
+
+    const newTemplate: SavedTemplate = {
+      id: `template-${Date.now()}`,
+      name: templateName,
+      image: templateImage,
+      createdAt: new Date().toISOString()
+    };
+
+    const updatedTemplates = [...savedTemplates, newTemplate];
+    setSavedTemplates(updatedTemplates);
+    localStorage.setItem("lovable.dev.savedTemplates", JSON.stringify(updatedTemplates));
+    toast.success("Template saved to your collection!");
+  };
+
+  const handleUseTemplate = (template: SavedTemplate) => {
+    setTemplateImage(template.image);
+    localStorage.setItem("lovable.dev.currentTemplate", template.image);
+    toast.success(`Using template: ${template.name}`);
+  };
+
+  const handleEditTemplate = (template: SavedTemplate) => {
+    setTemplateImage(template.image);
+    setTemplateName(template.name);
+    localStorage.setItem("lovable.dev.currentTemplate", template.image);
+    
+    // Remove the template from saved templates
+    const filteredTemplates = savedTemplates.filter(t => t.id !== template.id);
+    setSavedTemplates(filteredTemplates);
+    localStorage.setItem("lovable.dev.savedTemplates", JSON.stringify(filteredTemplates));
+    
+    toast(`Editing template: ${template.name}`);
+  };
+
+  const handleDeleteTemplate = (templateId: string) => {
+    const filteredTemplates = savedTemplates.filter(t => t.id !== templateId);
+    setSavedTemplates(filteredTemplates);
+    localStorage.setItem("lovable.dev.savedTemplates", JSON.stringify(filteredTemplates));
+    toast("Template deleted");
+  };
+
   const goToDataInput = () => {
     navigate("/data-input");
   };
 
-  // Load template from localStorage on component mount
-  useState(() => {
-    const savedTemplate = localStorage.getItem("lovable.dev.currentTemplate");
-    if (savedTemplate) {
-      setTemplateImage(savedTemplate);
-    }
-  });
+  const goToTextSettings = () => {
+    navigate("/text-settings");
+  };
 
   return (
     <div className="container mx-auto py-6">
@@ -95,7 +158,7 @@ export default function TemplatesPage() {
           <Card>
             <CardContent className="p-6">
               <div
-                className={`border-2 border-dashed rounded-lg p-8 transition-colors ${
+                className={`border-2 border-dashed rounded-lg transition-colors ${
                   isDragging ? "border-certigen-blue bg-blue-50" : "border-gray-300"
                 } ${templateImage ? "p-4" : "p-12"}`}
                 onDragOver={handleDragOver}
@@ -139,20 +202,88 @@ export default function TemplatesPage() {
                   </div>
                 )}
               </div>
+
+              {templateImage && (
+                <div className="mt-4">
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1">Template Name</label>
+                    <Input 
+                      type="text"
+                      value={templateName}
+                      onChange={(e) => setTemplateName(e.target.value)}
+                      placeholder="Enter template name"
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="flex justify-between">
+                    <Button variant="outline" onClick={handleSaveTemplate}>
+                      Save as Template
+                    </Button>
+                    <div className="space-x-2">
+                      <Button asChild variant="outline">
+                        <a href="/text-settings">
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          Add Text Elements
+                        </a>
+                      </Button>
+                      <Button onClick={goToDataInput}>
+                        Next: Data Input
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {templateImage && (
-            <div className="mt-4 flex justify-end">
-              <Button asChild variant="outline" className="mr-2">
-                <a href="/text-settings">
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Add Text Elements
-                </a>
-              </Button>
-              <Button onClick={goToDataInput}>
-                Next: Data Input
-              </Button>
+          {savedTemplates.length > 0 && (
+            <div className="mt-8">
+              <h2 className="text-xl font-semibold mb-4">Your Saved Templates</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {savedTemplates.map(template => (
+                  <Card key={template.id} className="overflow-hidden">
+                    <div className="aspect-video bg-gray-100 relative">
+                      <img 
+                        src={template.image} 
+                        alt={template.name}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 className="font-semibold truncate">{template.name}</h3>
+                        <p className="text-xs text-gray-500">
+                          {new Date(template.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={() => handleUseTemplate(template)}
+                          className="flex-1"
+                          variant="default"
+                        >
+                          Use Template
+                        </Button>
+                        <Button 
+                          onClick={() => handleEditTemplate(template)}
+                          size="icon"
+                          variant="outline"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          onClick={() => handleDeleteTemplate(template.id)}
+                          size="icon"
+                          variant="outline"
+                          className="text-red-500 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
           )}
         </div>
