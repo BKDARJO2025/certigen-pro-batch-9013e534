@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,17 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				certigen: {
+					blue: '#1E40AF',
+					lightblue: '#60A5FA',
+					gray: '#F3F4F6',
+					dark: '#111827',
 				}
+			},
+			fontFamily: {
+				montserrat: ['Montserrat', 'sans-serif'],
+				roboto: ['Roboto', 'sans-serif'],
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
