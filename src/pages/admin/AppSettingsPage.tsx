@@ -45,9 +45,10 @@ export default function AppSettingsPage() {
     };
   };
 
+  // Instead of passing the function directly, call it to get the initial values
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
-    defaultValues: loadSettings,
+    defaultValues: loadSettings(),
   });
 
   const onSubmit = (data: SettingsFormValues) => {
@@ -228,3 +229,4 @@ export default function AppSettingsPage() {
     </div>
   );
 }
+
