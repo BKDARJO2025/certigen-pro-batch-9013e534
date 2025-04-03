@@ -40,7 +40,7 @@ export default function AppSidebar() {
   ];
 
   return (
-    <Sidebar defaultCollapsed={false} collapsible>
+    <Sidebar defaultCollapsed={false} collapsible="icon">
       <SidebarHeader className="border-b">
         <div className="flex items-center px-4 py-2">
           <UploadCloud className="h-6 w-6 text-certigen-blue" />
