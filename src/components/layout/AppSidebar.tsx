@@ -40,17 +40,15 @@ export default function AppSidebar() {
   ];
 
   return (
-    <Sidebar defaultCollapsed={false} collapsible="icon">
+    <Sidebar collapsible="icon">
       <SidebarHeader className="border-b">
         <div className="flex items-center px-4 py-2">
           <UploadCloud className="h-6 w-6 text-certigen-blue" />
           <span className="ml-2 text-xl font-semibold tracking-tight font-montserrat">CertiGen Pro</span>
         </div>
-        <SidebarTrigger asChild>
-          <button className="flex h-10 w-10 items-center justify-center rounded-md hover:bg-accent">
-            <Menu className="h-4 w-4" />
-            <span className="sr-only">Toggle Sidebar</span>
-          </button>
+        <SidebarTrigger>
+          <Menu className="h-4 w-4" />
+          <span className="sr-only">Toggle Sidebar</span>
         </SidebarTrigger>
       </SidebarHeader>
       <SidebarContent>
