@@ -22,7 +22,13 @@ export default function AuthModal({ isOpen, onClose, initialMode = "login" }: Au
     login(userData);
     onClose();
     toast.success(`Welcome${userData.name ? `, ${userData.name}` : ''}!`);
-    navigate("/");
+    
+    // Navigate based on user role
+    if (userData.role === 'admin') {
+      navigate("/admin/users");
+    } else {
+      navigate("/app");
+    }
   };
 
   return (

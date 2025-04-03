@@ -15,18 +15,18 @@ import {
 } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { registerUser } from "@/lib/authService";
+import { RefreshCcw } from "lucide-react";
 
 const signupSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
   terms: z.boolean().refine((val) => val === true, {
     message: "You must accept the terms and conditions",
   }),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
+  notRobot: z.boolean().refine((val) => val === true, {
+    message: "Please verify that you're not a robot",
+  }),
 });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
@@ -38,6 +38,7 @@ interface SignupFormProps {
 
 export default function SignupForm({ onSuccess, onSwitchMode }: SignupFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [verificationCode, setVerificationCode] = useState(Math.floor(1000 + Math.random() * 9000).toString());
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -45,8 +46,8 @@ export default function SignupForm({ onSuccess, onSwitchMode }: SignupFormProps)
       name: "",
       email: "",
       password: "",
-      confirmPassword: "",
       terms: false,
+      notRobot: false,
     },
   });
 
@@ -60,6 +61,10 @@ export default function SignupForm({ onSuccess, onSwitchMode }: SignupFormProps)
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const regenerateCode = () => {
+    setVerificationCode(Math.floor(1000 + Math.random() * 9000).toString());
   };
 
   return (
@@ -105,19 +110,45 @@ export default function SignupForm({ onSuccess, onSwitchMode }: SignupFormProps)
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="confirmPassword"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Confirm Password</FormLabel>
-                <FormControl>
-                  <Input type="password" placeholder="******" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          
+          {/* Human verification */}
+          <div className="border rounded-md p-4 bg-gray-50">
+            <p className="text-sm font-medium mb-2">Verify you're not a robot</p>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="bg-white p-2 rounded border text-lg font-mono tracking-wider">
+                {verificationCode}
+              </div>
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="sm"
+                onClick={regenerateCode}
+              >
+                <RefreshCcw size={16} />
+              </Button>
+            </div>
+            <FormField
+              control={form.control}
+              name="notRobot"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      I can see the verification code
+                    </FormLabel>
+                    <FormMessage />
+                  </div>
+                </FormItem>
+              )}
+            />
+          </div>
+
           <FormField
             control={form.control}
             name="terms"
@@ -131,10 +162,7 @@ export default function SignupForm({ onSuccess, onSwitchMode }: SignupFormProps)
                 </FormControl>
                 <div className="space-y-1 leading-none">
                   <FormLabel>
-                    I accept the{" "}
-                    <a href="#" className="text-certigen-blue hover:underline">
-                      terms and conditions
-                    </a>
+                    I accept the terms and conditions
                   </FormLabel>
                   <FormMessage />
                 </div>

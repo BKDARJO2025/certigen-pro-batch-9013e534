@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -48,7 +47,6 @@ export default function LandingPage() {
               </p>
               <div className="flex gap-4">
                 <Button size="lg" onClick={openSignupModal}>Get Started</Button>
-                <Button size="lg" variant="outline">Learn More</Button>
               </div>
             </div>
             <div className="flex justify-center">

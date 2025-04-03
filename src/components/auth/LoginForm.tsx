@@ -15,10 +15,11 @@ import {
 } from "@/components/ui/form";
 import { toast } from "sonner";
 import { loginUser } from "@/lib/authService";
+import { useNavigate } from "react-router-dom";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(1, "Password is required"),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -30,6 +31,7 @@ interface LoginFormProps {
 
 export default function LoginForm({ onSuccess, onSwitchMode }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -44,6 +46,13 @@ export default function LoginForm({ onSuccess, onSwitchMode }: LoginFormProps) {
       setIsLoading(true);
       const user = await loginUser(data.email, data.password);
       onSuccess(user);
+      
+      // Explicitly navigate to correct route based on role
+      if (user.role === 'admin') {
+        navigate("/admin/users");
+      } else {
+        navigate("/app");
+      }
     } catch (error) {
       toast.error("Invalid email or password");
       console.error(error);
