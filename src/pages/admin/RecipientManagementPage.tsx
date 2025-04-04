@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Eye, Trash2, Plus, Check, X } from "lucide-react";
+import { Eye, Trash2, Plus, Check, X, MailIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ interface Recipient {
   id: string;
   certificateNumber: string;
   name: string;
+  email?: string;
   title: string;
   creationDate: string;
   printed: boolean;
@@ -27,6 +28,7 @@ export default function RecipientManagementPage() {
         id: "1",
         certificateNumber: "CERT-001",
         name: "John Doe",
+        email: "john@example.com",
         title: "Certificate of Excellence",
         creationDate: "2025-03-15",
         printed: false
@@ -35,6 +37,7 @@ export default function RecipientManagementPage() {
         id: "2",
         certificateNumber: "CERT-002",
         name: "Jane Smith",
+        email: "jane@example.com",
         title: "Certificate of Achievement",
         creationDate: "2025-03-20",
         printed: true
@@ -102,6 +105,7 @@ export default function RecipientManagementPage() {
               <TableHead>No.</TableHead>
               <TableHead>Certificate Number</TableHead>
               <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
               <TableHead>Title</TableHead>
               <TableHead>Creation Date</TableHead>
               <TableHead>Status</TableHead>
@@ -115,6 +119,7 @@ export default function RecipientManagementPage() {
                   <TableCell>{index + 1}</TableCell>
                   <TableCell>{recipient.certificateNumber}</TableCell>
                   <TableCell>{recipient.name}</TableCell>
+                  <TableCell>{recipient.email || "-"}</TableCell>
                   <TableCell>{recipient.title}</TableCell>
                   <TableCell>{recipient.creationDate}</TableCell>
                   <TableCell>
@@ -157,7 +162,7 @@ export default function RecipientManagementPage() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
                   No recipients found. Add a new recipient to get started.
                 </TableCell>
               </TableRow>
@@ -186,6 +191,9 @@ export default function RecipientManagementPage() {
                     <p className="text-3xl font-bold mb-4">{previewRecipient?.name}</p>
                     <p className="text-sm mb-1">Certificate Number: {previewRecipient?.certificateNumber}</p>
                     <p className="text-sm">Date: {previewRecipient?.creationDate}</p>
+                    {previewRecipient?.email && (
+                      <p className="text-sm mt-2">Contact: {previewRecipient.email}</p>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col items-center">

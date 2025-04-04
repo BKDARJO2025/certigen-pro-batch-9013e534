@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,25 +20,29 @@ import {
   Download,
   FileImage,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  MailIcon
 } from "lucide-react";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 interface Recipient {
   id: string;
   name: string;
+  email?: string;
   description?: string;
   status: 'pending' | 'processing' | 'completed';
   downloadUrl?: string;
+  emailSent?: boolean;
 }
 
 // Mock data for demo purposes
 const mockRecipients: Recipient[] = [
-  { id: '1', name: 'John Doe', description: 'Course Completion', status: 'pending' },
-  { id: '2', name: 'Jane Smith', description: 'Excellence Award', status: 'pending' },
-  { id: '3', name: 'Robert Johnson', description: 'Workshop Participation', status: 'pending' },
-  { id: '4', name: 'Emily Davis', status: 'pending' },
-  { id: '5', name: 'Michael Wilson', description: 'Best Performance', status: 'pending' }
+  { id: '1', name: 'John Doe', email: 'john@example.com', description: 'Course Completion', status: 'pending' },
+  { id: '2', name: 'Jane Smith', email: 'jane@example.com', description: 'Excellence Award', status: 'pending' },
+  { id: '3', name: 'Robert Johnson', email: 'robert@example.com', description: 'Workshop Participation', status: 'pending' },
+  { id: '4', name: 'Emily Davis', email: 'emily@example.com', status: 'pending' },
+  { id: '5', name: 'Michael Wilson', email: 'michael@example.com', description: 'Best Performance', status: 'pending' }
 ];
 
 export default function ExportPage() {
@@ -48,29 +51,29 @@ export default function ExportPage() {
   const [exportQuality, setExportQuality] = useState<'standard' | 'high'>('high');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationComplete, setGenerationComplete] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [selectedRecipient, setSelectedRecipient] = useState<Recipient | null>(null);
 
   const handleGenerateCertificates = () => {
     setIsGenerating(true);
     
-    // Simulate certificate generation process
     let processed = 0;
     const totalRecipients = recipients.length;
     
     recipients.forEach((recipient, index) => {
-      // Update status to processing
       setTimeout(() => {
         setRecipients(prev => prev.map(r => 
           r.id === recipient.id ? { ...r, status: 'processing' } : r
         ));
       }, index * 500);
       
-      // Complete processing
       setTimeout(() => {
         setRecipients(prev => prev.map(r => 
           r.id === recipient.id ? { 
             ...r, 
             status: 'completed',
-            downloadUrl: '#' // In a real app, this would be a real URL
+            downloadUrl: '#' 
           } : r
         ));
         
@@ -86,19 +89,80 @@ export default function ExportPage() {
 
   const downloadAll = () => {
     toast.info("Download started for all certificates");
-    // In a real implementation, this would create a zip file with all certificates
   };
 
   const downloadSingle = (id: string, name: string) => {
     toast.info(`Downloading certificate for ${name}`);
-    // In a real implementation, this would download the specific certificate
+  };
+
+  const sendEmail = async (recipient: Recipient) => {
+    if (!recipient.email) {
+      toast.error("No email address available for this recipient");
+      return;
+    }
+
+    if (recipient.status !== 'completed') {
+      toast.error("Certificate must be generated before sending email");
+      return;
+    }
+
+    setIsSendingEmail(true);
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setRecipients(prev => prev.map(r => 
+        r.id === recipient.id ? { ...r, emailSent: true } : r
+      ));
+      
+      toast.success(`Certificate sent to ${recipient.email}`);
+      setEmailDialogOpen(false);
+    } catch (error) {
+      console.error("Error sending email:", error);
+      toast.error("Failed to send email. Please try again.");
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const sendAllEmails = async () => {
+    const completedRecipients = recipients.filter(r => 
+      r.status === 'completed' && r.email && !r.emailSent
+    );
+    
+    if (completedRecipients.length === 0) {
+      toast.info("No completed certificates available to email");
+      return;
+    }
+    
+    setIsSendingEmail(true);
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      setRecipients(prev => prev.map(r => 
+        r.status === 'completed' && r.email ? { ...r, emailSent: true } : r
+      ));
+      
+      toast.success(`Sent ${completedRecipients.length} certificates by email`);
+    } catch (error) {
+      console.error("Error sending bulk emails:", error);
+      toast.error("Failed to send some emails. Please try again.");
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const openEmailDialog = (recipient: Recipient) => {
+    setSelectedRecipient(recipient);
+    setEmailDialogOpen(true);
   };
 
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Generate & Export Certificates</h1>
-        <p className="text-gray-500 mt-1">Create and download certificates for all recipients</p>
+        <p className="text-gray-500 mt-1">Create, download, and share certificates for all recipients</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -161,14 +225,30 @@ export default function ExportPage() {
                 </Button>
                 
                 {generationComplete && (
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={downloadAll}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Download All
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={downloadAll}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Download All
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={sendAllEmails}
+                      disabled={isSendingEmail}
+                    >
+                      {isSendingEmail ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <MailIcon className="mr-2 h-4 w-4" />
+                      )}
+                      Email All Certificates
+                    </Button>
+                  </>
                 )}
               </div>
             </CardContent>
@@ -184,15 +264,17 @@ export default function ExportPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {recipients.map((recipient) => (
                     <TableRow key={recipient.id}>
                       <TableCell className="font-medium">{recipient.name}</TableCell>
+                      <TableCell>{recipient.email || "-"}</TableCell>
                       <TableCell>{recipient.description || "-"}</TableCell>
                       <TableCell>
                         {recipient.status === 'pending' && (
@@ -207,21 +289,36 @@ export default function ExportPage() {
                         {recipient.status === 'completed' && (
                           <span className="flex items-center text-green-600">
                             <CheckCircle2 className="mr-2 h-3 w-3" />
-                            Completed
+                            {recipient.emailSent ? "Sent" : "Completed"}
                           </span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        {recipient.status === 'completed' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => downloadSingle(recipient.id, recipient.name)}
-                          >
-                            <Download className="mr-2 h-3 w-3" />
-                            Download
-                          </Button>
-                        )}
+                        <div className="flex justify-end gap-2">
+                          {recipient.status === 'completed' && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => downloadSingle(recipient.id, recipient.name)}
+                              >
+                                <Download className="mr-1 h-3 w-3" />
+                                Download
+                              </Button>
+                              
+                              <Button
+                                size="sm"
+                                variant={recipient.emailSent ? "ghost" : "outline"}
+                                disabled={!recipient.email || recipient.emailSent}
+                                onClick={() => openEmailDialog(recipient)}
+                                className={recipient.emailSent ? "text-green-600" : ""}
+                              >
+                                <MailIcon className="mr-1 h-3 w-3" />
+                                {recipient.emailSent ? "Sent" : "Email"}
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -265,6 +362,43 @@ export default function ExportPage() {
           )}
         </div>
       </div>
+
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send Certificate by Email</DialogTitle>
+            <DialogDescription>
+              This will send the certificate to {selectedRecipient?.email}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-4 border rounded-md bg-gray-50 mb-4">
+            <p className="font-medium">{selectedRecipient?.name}</p>
+            <p className="text-sm text-gray-500">{selectedRecipient?.email}</p>
+            <p className="text-sm text-gray-500 mt-1">{selectedRecipient?.description}</p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setEmailDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => selectedRecipient && sendEmail(selectedRecipient)}
+              disabled={isSendingEmail}
+            >
+              {isSendingEmail ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <MailIcon className="mr-2 h-4 w-4" />
+                  Send Now
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
