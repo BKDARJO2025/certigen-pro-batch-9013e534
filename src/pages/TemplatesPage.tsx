@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,11 +15,28 @@ interface SavedTemplate {
   createdAt: string;
 }
 
+// Sample template images for testing
+const sampleTemplates = [
+  {
+    id: "template-sample-1",
+    name: "Professional Certificate",
+    image: "/placeholder.svg",
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "template-sample-2",
+    name: "Academic Achievement",
+    image: "/placeholder.svg",
+    createdAt: new Date().toISOString()
+  }
+];
+
 export default function TemplatesPage() {
   const [templateImage, setTemplateImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [savedTemplates, setSavedTemplates] = useState<SavedTemplate[]>([]);
   const [templateName, setTemplateName] = useState<string>("My Certificate Template");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   // Load saved templates and current template
@@ -32,6 +49,10 @@ export default function TemplatesPage() {
     const templates = localStorage.getItem("lovable.dev.savedTemplates");
     if (templates) {
       setSavedTemplates(JSON.parse(templates));
+    } else {
+      // Initialize with sample templates if none exist
+      localStorage.setItem("lovable.dev.savedTemplates", JSON.stringify(sampleTemplates));
+      setSavedTemplates(sampleTemplates);
     }
   }, []);
 
@@ -89,6 +110,12 @@ export default function TemplatesPage() {
     reader.readAsDataURL(file);
   };
 
+  const handleClickUpload = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
   const handleRemoveTemplate = () => {
     setTemplateImage(null);
     localStorage.removeItem("lovable.dev.currentTemplate");
@@ -111,6 +138,19 @@ export default function TemplatesPage() {
     const updatedTemplates = [...savedTemplates, newTemplate];
     setSavedTemplates(updatedTemplates);
     localStorage.setItem("lovable.dev.savedTemplates", JSON.stringify(updatedTemplates));
+    
+    // Also save to templates collection for admin view
+    const adminTemplates = localStorage.getItem("lovable.dev.templates");
+    const parsedAdminTemplates = adminTemplates ? JSON.parse(adminTemplates) : [];
+    const adminTemplate = {
+      id: newTemplate.id,
+      name: newTemplate.name,
+      thumbnail: newTemplate.image,
+      createdAt: newTemplate.createdAt,
+      status: "active"
+    };
+    localStorage.setItem("lovable.dev.templates", JSON.stringify([...parsedAdminTemplates, adminTemplate]));
+    
     toast.success("Template saved to your collection!");
   };
 
@@ -141,10 +181,18 @@ export default function TemplatesPage() {
   };
 
   const goToDataInput = () => {
-    navigate("/data-input");
+    if (!templateImage) {
+      toast.error("Please upload or select a template first");
+      return;
+    }
+    navigate("/text-settings");
   };
 
   const goToTextSettings = () => {
+    if (!templateImage) {
+      toast.error("Please upload or select a template first");
+      return;
+    }
     navigate("/text-settings");
   };
 
@@ -172,15 +220,19 @@ export default function TemplatesPage() {
                     <UploadCloud className="mx-auto h-12 w-12 text-gray-400" />
                     <p className="mt-2 text-sm text-gray-600">
                       Drag and drop your certificate template here, or{" "}
-                      <label className="text-certigen-blue hover:text-certigen-blue cursor-pointer">
+                      <button 
+                        className="text-blue-500 hover:text-blue-700 cursor-pointer"
+                        onClick={handleClickUpload}
+                      >
                         browse
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/png, image/jpeg, image/svg+xml, image/gif"
-                          onChange={handleFileChange}
-                        />
-                      </label>
+                      </button>
+                      <input
+                        type="file"
+                        className="hidden"
+                        ref={fileInputRef}
+                        accept="image/png, image/jpeg, image/svg+xml, image/gif"
+                        onChange={handleFileChange}
+                      />
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
                       Supports: JPG, PNG, SVG, GIF (Max 10MB)
@@ -222,14 +274,12 @@ export default function TemplatesPage() {
                       Save as Template
                     </Button>
                     <div className="space-x-2">
-                      <Button asChild variant="outline">
-                        <a href="/text-settings">
-                          <ExternalLink className="mr-2 h-4 w-4" />
-                          Add Text Elements
-                        </a>
+                      <Button onClick={goToTextSettings} variant="outline">
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Add Text Elements
                       </Button>
                       <Button onClick={goToDataInput}>
-                        Next: Data Input
+                        Next: Text Settings
                       </Button>
                     </div>
                   </div>
@@ -320,6 +370,26 @@ export default function TemplatesPage() {
               <p className="text-sm mt-1">
                 After uploading your template, you'll need to add and position text elements in the next step before generating certificates.
               </p>
+            </div>
+            
+            <div className="mt-6">
+              <h3 className="font-medium mb-2">Demo Templates</h3>
+              <p className="text-sm mb-3">Try these sample templates to test the certificate generation flow:</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div 
+                  className="border rounded p-2 cursor-pointer hover:bg-blue-50 transition-colors"
+                  onClick={() => {
+                    const image = "/placeholder.svg";
+                    setTemplateImage(image);
+                    setTemplateName("Sample Certificate");
+                    localStorage.setItem("lovable.dev.currentTemplate", image);
+                    toast.success("Sample template loaded!");
+                  }}
+                >
+                  <img src="/placeholder.svg" alt="Sample template" className="w-full aspect-video object-contain mb-1" />
+                  <p className="text-xs font-medium text-center">Basic Certificate</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

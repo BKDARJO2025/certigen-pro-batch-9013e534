@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Template {
   id: string;
@@ -108,62 +110,145 @@ export default function TemplateManagementPage() {
         <Button onClick={handleCreateTemplate}>Create New Template</Button>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {templates.map(template => (
-          <Card key={template.id}>
-            <div className="p-4 aspect-video bg-gray-100 border-b">
-              <img 
-                src={template.thumbnail} 
-                alt={template.name}
-                className="w-full h-full object-contain cursor-pointer"
-                onClick={() => handleUseTemplate(template)}
-              />
-            </div>
-            <CardContent className="pt-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-semibold">{template.name}</h3>
-                  <p className="text-sm text-gray-500">
-                    Created: {new Date(template.createdAt).toLocaleDateString()}
-                  </p>
+      <Tabs defaultValue="grid" className="w-full mb-6">
+        <TabsList>
+          <TabsTrigger value="grid">Grid View</TabsTrigger>
+          <TabsTrigger value="list">List View</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="grid">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {templates.map(template => (
+              <Card key={template.id}>
+                <div className="p-4 aspect-video bg-gray-100 border-b">
+                  <img 
+                    src={template.thumbnail} 
+                    alt={template.name}
+                    className="w-full h-full object-contain cursor-pointer"
+                    onClick={() => handleUseTemplate(template)}
+                  />
                 </div>
-                <span className={`px-2 py-1 text-xs rounded-full ${
-                  template.status === "active" 
-                    ? "bg-green-100 text-green-800" 
-                    : "bg-gray-100 text-gray-800"
-                }`}>
-                  {template.status}
-                </span>
+                <CardContent className="pt-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-semibold">{template.name}</h3>
+                      <p className="text-sm text-gray-500">
+                        Created: {new Date(template.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      template.status === "active" 
+                        ? "bg-green-100 text-green-800" 
+                        : "bg-gray-100 text-gray-800"
+                    }`}>
+                      {template.status}
+                    </span>
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={() => handleEditTemplate(template)}
+                    >
+                      Edit
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="destructive" 
+                      className="flex-1"
+                      onClick={() => handleDeleteTemplate(template.id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    className="w-full mt-2"
+                    onClick={() => handleUseTemplate(template)}
+                  >
+                    Use Template
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="list">
+          <Card>
+            <CardContent className="p-4">
+              <div className="rounded-md border">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b">
+                    <tr>
+                      <th className="p-3 text-left font-medium">Template</th>
+                      <th className="p-3 text-left font-medium">Created</th>
+                      <th className="p-3 text-left font-medium">Status</th>
+                      <th className="p-3 text-right font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {templates.map(template => (
+                      <tr key={template.id} className="border-b hover:bg-gray-50">
+                        <td className="p-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-16 rounded bg-gray-100 overflow-hidden">
+                              <img 
+                                src={template.thumbnail} 
+                                alt={template.name}
+                                className="h-full w-full object-contain"
+                              />
+                            </div>
+                            <span className="font-medium">{template.name}</span>
+                          </div>
+                        </td>
+                        <td className="p-3 text-gray-600">
+                          {new Date(template.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="p-3">
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            template.status === "active" 
+                              ? "bg-green-100 text-green-800" 
+                              : "bg-gray-100 text-gray-800"
+                          }`}>
+                            {template.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleUseTemplate(template)}
+                            >
+                              Use
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleEditTemplate(template)}
+                            >
+                              Edit
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="destructive"
+                              onClick={() => handleDeleteTemplate(template.id)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <div className="flex gap-2 mt-4">
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="flex-1"
-                  onClick={() => handleEditTemplate(template)}
-                >
-                  Edit
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="destructive" 
-                  className="flex-1"
-                  onClick={() => handleDeleteTemplate(template.id)}
-                >
-                  Delete
-                </Button>
-              </div>
-              <Button 
-                size="sm" 
-                className="w-full mt-2"
-                onClick={() => handleUseTemplate(template)}
-              >
-                Use Template
-              </Button>
             </CardContent>
           </Card>
-        ))}
-      </div>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
