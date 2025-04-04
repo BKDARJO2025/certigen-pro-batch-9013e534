@@ -19,6 +19,8 @@ import AdminLayout from "./components/admin/AdminLayout";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import TemplateManagementPage from "./pages/admin/TemplateManagementPage";
 import AppSettingsPage from "./pages/admin/AppSettingsPage";
+import RecipientManagementPage from "./pages/admin/RecipientManagementPage";
+import AddRecipientPage from "./pages/admin/AddRecipientPage";
 
 const queryClient = new QueryClient();
 
@@ -77,6 +79,8 @@ const App = () => (
               <Route path="users" element={<UserManagementPage />} />
               <Route path="templates" element={<TemplateManagementPage />} />
               <Route path="settings" element={<AppSettingsPage />} />
+              <Route path="recipients" element={<RecipientManagementPage />} />
+              <Route path="recipients/add" element={<AddRecipientPage />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
