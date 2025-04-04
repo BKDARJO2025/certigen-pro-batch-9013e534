@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,7 +25,6 @@ export default function TemplateManagementPage() {
   const navigate = useNavigate();
   
   useEffect(() => {
-    // Load templates from localStorage or initialize with mock data
     const storedTemplates = localStorage.getItem("lovable.dev.templates");
     
     if (storedTemplates) {
@@ -172,6 +170,9 @@ export default function TemplateManagementPage() {
           <DialogHeader>
             <DialogTitle>Edit Template</DialogTitle>
           </DialogHeader>
+          <DialogDescription>
+            <p>Make changes to the template details.</p>
+          </DialogDescription>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="name">Template Name</Label>

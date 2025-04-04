@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { UploadCloud, X, ExternalLink, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 
 interface SavedTemplate {
   id: string;
