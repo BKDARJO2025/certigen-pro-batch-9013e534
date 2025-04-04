@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { FileImage, Users, Type, Download } from "lucide-react";
@@ -7,6 +8,21 @@ import AuthModal from "@/components/auth/AuthModal";
 export default function LandingPage() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [heroImage, setHeroImage] = useState("/placeholder.svg");
+
+  // Save the image to localStorage on component mount
+  useEffect(() => {
+    // Save the image URL to localStorage if it doesn't exist yet
+    if (!localStorage.getItem("lovable.dev.heroImage")) {
+      localStorage.setItem("lovable.dev.heroImage", "/lovable-uploads/68b7fc9d-fe25-4620-9634-60798093b5ef.png");
+    }
+    
+    // Set the hero image from localStorage
+    const savedImage = localStorage.getItem("lovable.dev.heroImage");
+    if (savedImage) {
+      setHeroImage(savedImage);
+    }
+  }, []);
 
   const openLoginModal = () => {
     setAuthMode("login");
@@ -51,10 +67,10 @@ export default function LandingPage() {
             </div>
             <div className="flex justify-center">
               <img 
-                src="/placeholder.svg" 
-                alt="Certificate template example" 
+                src={heroImage} 
+                alt="Certificate bulk generation system" 
                 className="rounded-lg shadow-lg max-w-full h-auto"
-                style={{ maxHeight: '400px' }}
+                style={{ maxHeight: '500px' }}
               />
             </div>
           </div>
