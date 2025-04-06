@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,6 +52,13 @@ export default function TemplateManagementPage() {
           thumbnail: "/placeholder.svg",
           createdAt: new Date(2023, 7, 10).toISOString(),
           status: "inactive"
+        },
+        {
+          id: "template-sidoarjo",
+          name: "Sidoarjo Government Certificate",
+          thumbnail: "/lovable-uploads/46b82dae-778b-477f-82aa-90ef02fc3a31.png",
+          createdAt: new Date().toISOString(),
+          status: "active"
         }
       ];
       

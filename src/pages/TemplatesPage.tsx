@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,7 +14,7 @@ interface SavedTemplate {
   createdAt: string;
 }
 
-// Sample template images for testing
+// Sample template images
 const sampleTemplates = [
   {
     id: "template-sample-1",
@@ -27,6 +26,12 @@ const sampleTemplates = [
     id: "template-sample-2",
     name: "Academic Achievement",
     image: "/placeholder.svg",
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "template-sample-3",
+    name: "Sidoarjo Government Certificate",
+    image: "/lovable-uploads/46b82dae-778b-477f-82aa-90ef02fc3a31.png",
     createdAt: new Date().toISOString()
   }
 ];
@@ -48,11 +53,42 @@ export default function TemplatesPage() {
     
     const templates = localStorage.getItem("lovable.dev.savedTemplates");
     if (templates) {
-      setSavedTemplates(JSON.parse(templates));
+      // Check if the Sidoarjo template already exists in saved templates
+      const parsedTemplates = JSON.parse(templates);
+      const sidoarjoTemplateExists = parsedTemplates.some(
+        (t: SavedTemplate) => t.name === "Sidoarjo Government Certificate"
+      );
+      
+      if (!sidoarjoTemplateExists) {
+        // Add Sidoarjo template if it doesn't exist
+        const updatedTemplates = [
+          ...parsedTemplates, 
+          {
+            id: "template-sample-sidoarjo",
+            name: "Sidoarjo Government Certificate",
+            image: "/lovable-uploads/46b82dae-778b-477f-82aa-90ef02fc3a31.png",
+            createdAt: new Date().toISOString()
+          }
+        ];
+        localStorage.setItem("lovable.dev.savedTemplates", JSON.stringify(updatedTemplates));
+        setSavedTemplates(updatedTemplates);
+      } else {
+        setSavedTemplates(parsedTemplates);
+      }
     } else {
       // Initialize with sample templates if none exist
       localStorage.setItem("lovable.dev.savedTemplates", JSON.stringify(sampleTemplates));
       setSavedTemplates(sampleTemplates);
+      
+      // Also save to templates collection for admin view
+      const adminTemplates = sampleTemplates.map(template => ({
+        id: template.id,
+        name: template.name,
+        thumbnail: template.image,
+        createdAt: template.createdAt,
+        status: "active"
+      }));
+      localStorage.setItem("lovable.dev.templates", JSON.stringify(adminTemplates));
     }
   }, []);
 
@@ -388,6 +424,19 @@ export default function TemplatesPage() {
                 >
                   <img src="/placeholder.svg" alt="Sample template" className="w-full aspect-video object-contain mb-1" />
                   <p className="text-xs font-medium text-center">Basic Certificate</p>
+                </div>
+                <div 
+                  className="border rounded p-2 cursor-pointer hover:bg-blue-50 transition-colors"
+                  onClick={() => {
+                    const image = "/lovable-uploads/46b82dae-778b-477f-82aa-90ef02fc3a31.png";
+                    setTemplateImage(image);
+                    setTemplateName("Sidoarjo Government Certificate");
+                    localStorage.setItem("lovable.dev.currentTemplate", image);
+                    toast.success("Sidoarjo Certificate template loaded!");
+                  }}
+                >
+                  <img src="/lovable-uploads/46b82dae-778b-477f-82aa-90ef02fc3a31.png" alt="Sidoarjo Certificate" className="w-full aspect-video object-contain mb-1" />
+                  <p className="text-xs font-medium text-center">Sidoarjo Government Certificate</p>
                 </div>
               </div>
             </div>
