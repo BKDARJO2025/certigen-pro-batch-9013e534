@@ -8,11 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Slider } from "@/components/ui/slider";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Circle } from 'lucide-react';
+import { Circle, MoveHorizontal, MoveVertical, Type, Users } from 'lucide-react';
 import { ChromePicker } from 'react-color';
 import { useSearchParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import ConfirmationModal from "@/components/ConfirmationModal";
+import { Switch } from "@/components/ui/switch";
 
 interface TextElement {
   id: string;
@@ -39,6 +40,10 @@ export default function TextSettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [templateImage, setTemplateImage] = useState<string | null>(null);
+  const [isBulkEdit, setIsBulkEdit] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
+  const canvasRef = useState<HTMLDivElement | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -126,34 +131,79 @@ export default function TextSettingsPage() {
     }
   };
 
+  const handleRemoveElement = (id: string) => {
+    const updatedElements = textElements.filter(element => element.id !== id);
+    setTextElements(updatedElements);
+    localStorage.setItem("lovable.dev.textElements", JSON.stringify(updatedElements));
+    
+    if (selectedElementId === id) {
+      setSelectedElementId(updatedElements.length > 0 ? updatedElements[0].id : null);
+    }
+    toast.success("Text element removed");
+  };
+
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setElementText(e.target.value);
-    updateElementProperty(selectedElementId, "text", e.target.value);
-  };
-
-  const handleXChange = (value: number) => {
-    setElementX(value);
-    updateElementProperty(selectedElementId, "x", value);
-  };
-
-  const handleYChange = (value: number) => {
-    setElementY(value);
-    updateElementProperty(selectedElementId, "y", value);
+    if (isBulkEdit) {
+      // Update all text elements
+      const updatedElements = textElements.map(element => ({
+        ...element,
+        text: e.target.value
+      }));
+      setTextElements(updatedElements);
+      localStorage.setItem("lovable.dev.textElements", JSON.stringify(updatedElements));
+    } else {
+      // Update only selected element
+      updateElementProperty(selectedElementId, "text", e.target.value);
+    }
   };
 
   const handleFontSizeChange = (value: number) => {
     setElementFontSize(value);
-    updateElementProperty(selectedElementId, "fontSize", value);
+    if (isBulkEdit) {
+      // Update all text elements
+      const updatedElements = textElements.map(element => ({
+        ...element,
+        fontSize: value
+      }));
+      setTextElements(updatedElements);
+      localStorage.setItem("lovable.dev.textElements", JSON.stringify(updatedElements));
+    } else {
+      // Update only selected element
+      updateElementProperty(selectedElementId, "fontSize", value);
+    }
   };
 
   const handleFontColorChange = (color: string) => {
     setElementFontColor(color);
-    updateElementProperty(selectedElementId, "fontColor", color);
+    if (isBulkEdit) {
+      // Update all text elements
+      const updatedElements = textElements.map(element => ({
+        ...element,
+        fontColor: color
+      }));
+      setTextElements(updatedElements);
+      localStorage.setItem("lovable.dev.textElements", JSON.stringify(updatedElements));
+    } else {
+      // Update only selected element
+      updateElementProperty(selectedElementId, "fontColor", color);
+    }
   };
 
   const handleFontFamilyChange = (fontFamily: string) => {
     setElementFontFamily(fontFamily);
-    updateElementProperty(selectedElementId, "fontFamily", fontFamily);
+    if (isBulkEdit) {
+      // Update all text elements
+      const updatedElements = textElements.map(element => ({
+        ...element,
+        fontFamily: fontFamily
+      }));
+      setTextElements(updatedElements);
+      localStorage.setItem("lovable.dev.textElements", JSON.stringify(updatedElements));
+    } else {
+      // Update only selected element
+      updateElementProperty(selectedElementId, "fontFamily", fontFamily);
+    }
   };
 
   const updateElementProperty = (id: string | null, property: string, value: any) => {
@@ -189,6 +239,80 @@ export default function TextSettingsPage() {
     navigate("/export");
   };
 
+  const handleMouseDown = (e: React.MouseEvent, elementId: string) => {
+    if (e.button !== 0) return; // Only left mouse button
+    
+    setIsDragging(true);
+    setSelectedElementId(elementId);
+    
+    const canvas = e.currentTarget.closest('.template-canvas');
+    if (canvas) {
+      const rect = canvas.getBoundingClientRect();
+      setDragStartPos({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      });
+    }
+    
+    e.stopPropagation();
+    e.preventDefault();
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !selectedElementId) return;
+    
+    const canvas = e.currentTarget.closest('.template-canvas');
+    if (canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      
+      updateElementProperty(selectedElementId, "x", Math.max(0, Math.min(100, x)));
+      updateElementProperty(selectedElementId, "y", Math.max(0, Math.min(100, y)));
+      
+      setElementX(Math.max(0, Math.min(100, x)));
+      setElementY(Math.max(0, Math.min(100, y)));
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  useEffect(() => {
+    if (isDragging) {
+      // Add global mouse up and mouse move handlers
+      const handleGlobalMouseMove = (e: MouseEvent) => {
+        if (!isDragging || !selectedElementId) return;
+        
+        const canvas = document.querySelector('.template-canvas');
+        if (canvas) {
+          const rect = canvas.getBoundingClientRect();
+          const x = ((e.clientX - rect.left) / rect.width) * 100;
+          const y = ((e.clientY - rect.top) / rect.height) * 100;
+          
+          updateElementProperty(selectedElementId, "x", Math.max(0, Math.min(100, x)));
+          updateElementProperty(selectedElementId, "y", Math.max(0, Math.min(100, y)));
+          
+          setElementX(Math.max(0, Math.min(100, x)));
+          setElementY(Math.max(0, Math.min(100, y)));
+        }
+      };
+      
+      const handleGlobalMouseUp = () => {
+        setIsDragging(false);
+      };
+      
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleGlobalMouseMove);
+        document.removeEventListener('mouseup', handleGlobalMouseUp);
+      };
+    }
+  }, [isDragging, selectedElementId]);
+
   const getTextElementStyle = (element: TextElement) => {
     return {
       position: 'absolute' as 'absolute',
@@ -198,7 +322,38 @@ export default function TextSettingsPage() {
       color: element.fontColor,
       fontFamily: element.fontFamily,
       transform: 'translate(-50%, -50%)',
+      cursor: isDragging && selectedElementId === element.id ? 'grabbing' : 'grab',
+      userSelect: 'none' as 'none',
+      padding: '4px',
+      borderRadius: '4px',
     };
+  };
+
+  const moveElement = (direction: 'up' | 'down' | 'left' | 'right', amount: number = 1) => {
+    if (!selectedElementId) return;
+    
+    let newX = elementX;
+    let newY = elementY;
+    
+    switch (direction) {
+      case 'up':
+        newY = Math.max(0, elementY - amount);
+        break;
+      case 'down':
+        newY = Math.min(100, elementY + amount);
+        break;
+      case 'left':
+        newX = Math.max(0, elementX - amount);
+        break;
+      case 'right':
+        newX = Math.min(100, elementX + amount);
+        break;
+    }
+    
+    setElementX(newX);
+    setElementY(newY);
+    updateElementProperty(selectedElementId, "x", newX);
+    updateElementProperty(selectedElementId, "y", newY);
   };
 
   return (
@@ -210,100 +365,177 @@ export default function TextSettingsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div>
-          <Card>
-            <CardContent className="p-6">
-              <div className="mb-4">
-                <Label htmlFor="text">Text</Label>
-                <Textarea
-                  id="text"
-                  placeholder="Enter text"
-                  value={elementText}
-                  onChange={handleTextChange}
-                  className="mt-1"
-                />
-              </div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Text Properties</h2>
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="bulk-edit" className="text-sm">Bulk Edit</Label>
+              <Switch 
+                id="bulk-edit" 
+                checked={isBulkEdit} 
+                onCheckedChange={setIsBulkEdit}
+              />
+            </div>
+          </div>
 
-              <div className="mb-4">
-                <Label>Position</Label>
-                <div className="flex items-center space-x-4 mt-1">
-                  <div>
-                    <Label htmlFor="x">X:</Label>
+          {selectedElementId || isBulkEdit ? (
+            <Card>
+              <CardContent className="p-6">
+                <div className="mb-4">
+                  <Label htmlFor="text">Text</Label>
+                  <Textarea
+                    id="text"
+                    placeholder="Enter text"
+                    value={elementText}
+                    onChange={handleTextChange}
+                    className="mt-1"
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <Label>Position Controls</Label>
+                  <div className="grid grid-cols-2 gap-2 mt-1">
+                    <Button variant="outline" onClick={() => moveElement('up')} className="flex items-center justify-center">
+                      <MoveVertical className="mr-2 h-4 w-4" />
+                      Move Up
+                    </Button>
+                    <Button variant="outline" onClick={() => moveElement('down')} className="flex items-center justify-center">
+                      <MoveVertical className="mr-2 h-4 w-4 transform rotate-180" />
+                      Move Down
+                    </Button>
+                    <Button variant="outline" onClick={() => moveElement('left')} className="flex items-center justify-center">
+                      <MoveHorizontal className="mr-2 h-4 w-4 transform -scale-x-100" />
+                      Move Left
+                    </Button>
+                    <Button variant="outline" onClick={() => moveElement('right')} className="flex items-center justify-center">
+                      <MoveHorizontal className="mr-2 h-4 w-4" />
+                      Move Right
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">Tip: Drag text elements directly on the template to position them precisely</p>
+                </div>
+
+                <div className="mb-4">
+                  <Label htmlFor="fontSize">Font Size</Label>
+                  <div className="flex items-center space-x-4">
                     <Slider
-                      id="x"
-                      defaultValue={[elementX]}
+                      id="fontSize"
+                      defaultValue={[elementFontSize]}
+                      value={[elementFontSize]}
                       max={100}
                       step={1}
-                      onValueChange={(value) => handleXChange(value[0])}
+                      onValueChange={(value) => handleFontSizeChange(value[0])}
+                      className="flex-1"
                     />
-                  </div>
-                  <div>
-                    <Label htmlFor="y">Y:</Label>
-                    <Slider
-                      id="y"
-                      defaultValue={[elementY]}
-                      max={100}
-                      step={1}
-                      onValueChange={(value) => handleYChange(value[0])}
-                    />
+                    <span className="text-sm font-mono w-10 text-right">{elementFontSize}px</span>
                   </div>
                 </div>
-              </div>
 
-              <div className="mb-4">
-                <Label htmlFor="fontSize">Font Size</Label>
-                <Slider
-                  id="fontSize"
-                  defaultValue={[elementFontSize]}
-                  max={100}
-                  step={1}
-                  onValueChange={(value) => handleFontSizeChange(value[0])}
-                />
-              </div>
-
-              <div className="mb-4">
-                <Label>Font Color</Label>
-                <div className="flex items-center space-x-4 mt-1">
-                  <Circle size={24} fill={elementFontColor} color={elementFontColor} className="shadow" />
-                  <Button variant="outline" onClick={handleColorPickerToggle}>
-                    Pick Color
-                  </Button>
-                  {showColorPicker && (
-                    <div className="absolute z-10 mt-2">
-                      <ChromePicker color={elementFontColor} onChangeComplete={handleColorChangeComplete} />
-                    </div>
-                  )}
+                <div className="mb-4">
+                  <Label>Font Color</Label>
+                  <div className="flex items-center space-x-4 mt-1">
+                    <Circle size={24} fill={elementFontColor} color={elementFontColor} className="shadow" />
+                    <Button variant="outline" onClick={handleColorPickerToggle}>
+                      Pick Color
+                    </Button>
+                    {showColorPicker && (
+                      <div className="absolute z-10 mt-2">
+                        <ChromePicker color={elementFontColor} onChangeComplete={handleColorChangeComplete} />
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <div className="mb-4">
-                <Label htmlFor="fontFamily">Font Family</Label>
-                <DropdownMenu>
-                  <DropdownMenuTrigger className="w-full">
-                    <Input
-                      id="fontFamily"
-                      value={elementFontFamily}
-                      className="cursor-pointer"
-                      readOnly
-                    />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuLabel>Select Font</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => handleFontFamilyChange("Arial")}>Arial</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleFontFamilyChange("Helvetica")}>Helvetica</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleFontFamilyChange("Times New Roman")}>Times New Roman</DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => handleFontFamilyChange(defaultFont)}>Default Font</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </CardContent>
-          </Card>
+                <div className="mb-4">
+                  <Label htmlFor="fontFamily">Font Family</Label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="w-full">
+                      <Input
+                        id="fontFamily"
+                        value={elementFontFamily}
+                        className="cursor-pointer"
+                        readOnly
+                      />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuLabel>Select Font</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => handleFontFamilyChange("Arial")}>Arial</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleFontFamilyChange("Helvetica")}>Helvetica</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleFontFamilyChange("Times New Roman")}>Times New Roman</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleFontFamilyChange("Courier New")}>Courier New</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleFontFamilyChange("Georgia")}>Georgia</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleFontFamilyChange(defaultFont)}>Default Font</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="bg-gray-100 rounded-lg p-6 text-center">
+              <Type className="mx-auto h-12 w-12 text-gray-400 mb-2" />
+              <p className="text-gray-500">Select a text element to edit its properties</p>
+              <Button onClick={handleAddTextElement} className="mt-4">Add New Text Element</Button>
+            </div>
+          )}
+
+          <div className="mt-6">
+            <h2 className="text-xl font-semibold mb-2">Text Elements</h2>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-gray-500">Manage and select text elements to customize</p>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={handleAddTextElement} 
+                className="flex items-center"
+              >
+                <Type className="mr-2 h-4 w-4" />
+                Add New
+              </Button>
+            </div>
+            <Card>
+              <CardContent className="p-3">
+                {textElements.length > 0 ? (
+                  <ul className="divide-y divide-gray-100">
+                    {textElements.map(element => (
+                      <li
+                        key={element.id}
+                        className={`py-2 px-3 rounded-md flex items-center justify-between hover:bg-gray-50 ${selectedElementId === element.id ? 'bg-blue-50 text-blue-700 font-medium' : ''}`}
+                      >
+                        <div 
+                          className="flex-1 cursor-pointer truncate pr-2" 
+                          onClick={() => handleSelectElement(element.id)}
+                        >
+                          {element.text || "Empty text"}
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleRemoveElement(element.id)}
+                          className="h-8 w-8 text-gray-500 hover:text-red-500"
+                        >
+                          <Circle className="h-4 w-4" fill="red" />
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-center py-3">
+                    <p className="text-gray-500 text-sm">No text elements added yet</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         <div>
           <div className="mb-6">
             <h2 className="text-xl font-semibold mb-2">Template Preview</h2>
-            <div className="relative border rounded-lg overflow-hidden">
+            <div 
+              className="relative border rounded-lg overflow-hidden template-canvas" 
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+            >
               {templateImage ? (
                 <div className="relative">
                   <img src={templateImage} alt="Certificate template" className="w-full h-auto" />
@@ -312,8 +544,8 @@ export default function TextSettingsPage() {
                       <div
                         key={element.id} 
                         style={getTextElementStyle(element)}
-                        className={`cursor-pointer ${selectedElementId === element.id ? 'ring-2 ring-blue-500 p-0.5' : ''}`}
-                        onClick={() => handleSelectElement(element.id)}
+                        className={`${selectedElementId === element.id ? 'ring-2 ring-blue-500' : ''}`}
+                        onMouseDown={(e) => handleMouseDown(e, element.id)}
                       >
                         {element.text}
                       </div>
@@ -333,29 +565,40 @@ export default function TextSettingsPage() {
                 </div>
               )}
             </div>
+            <div className="mt-2 text-xs text-gray-500">
+              <p>Click and drag text elements to position them on the template. Use the controls to make fine adjustments.</p>
+            </div>
           </div>
 
           <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-2">Text Elements</h2>
-            <p className="text-gray-500">Manage and select text elements to customize</p>
-            <Button onClick={handleAddTextElement} className="mt-4">Add Text Element</Button>
-          </div>
-
-          <Card>
-            <CardContent className="p-6">
-              <ul>
-                {textElements.map(element => (
-                  <li
-                    key={element.id}
-                    className={`py-2 px-3 rounded-md cursor-pointer hover:bg-gray-100 ${selectedElementId === element.id ? 'bg-gray-200' : ''}`}
-                    onClick={() => handleSelectElement(element.id)}
-                  >
-                    {element.text}
+            <h2 className="text-xl font-semibold mb-2">Instructions</h2>
+            <Card>
+              <CardContent className="p-4">
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-start">
+                    <span className="mr-2 bg-blue-100 text-blue-800 rounded-full w-5 h-5 flex items-center justify-center text-xs">1</span>
+                    <span>Add text elements using the "Add New" button</span>
                   </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
+                  <li className="flex items-start">
+                    <span className="mr-2 bg-blue-100 text-blue-800 rounded-full w-5 h-5 flex items-center justify-center text-xs">2</span>
+                    <span>Edit text content and appearance in the Text Properties panel</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="mr-2 bg-blue-100 text-blue-800 rounded-full w-5 h-5 flex items-center justify-center text-xs">3</span>
+                    <span>Position text by dragging it directly on the template</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="mr-2 bg-blue-100 text-blue-800 rounded-full w-5 h-5 flex items-center justify-center text-xs">4</span>
+                    <span>Use the move buttons for precise positioning adjustments</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="mr-2 bg-blue-100 text-blue-800 rounded-full w-5 h-5 flex items-center justify-center text-xs">5</span>
+                    <span>Toggle "Bulk Edit" to apply changes to all text elements at once</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
 
