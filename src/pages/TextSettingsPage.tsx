@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,9 +38,16 @@ export default function TextSettingsPage() {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [templateImage, setTemplateImage] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Load the selected template from localStorage
+    const template = localStorage.getItem("lovable.dev.currentTemplate");
+    if (template) {
+      setTemplateImage(template);
+    }
+
     const storedElements = localStorage.getItem("lovable.dev.textElements");
     if (storedElements) {
       setTextElements(JSON.parse(storedElements));
@@ -181,6 +189,18 @@ export default function TextSettingsPage() {
     navigate("/export");
   };
 
+  const getTextElementStyle = (element: TextElement) => {
+    return {
+      position: 'absolute' as 'absolute',
+      left: `${element.x}%`,
+      top: `${element.y}%`,
+      fontSize: `${element.fontSize}px`,
+      color: element.fontColor,
+      fontFamily: element.fontFamily,
+      transform: 'translate(-50%, -50%)',
+    };
+  };
+
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
@@ -243,7 +263,7 @@ export default function TextSettingsPage() {
               <div className="mb-4">
                 <Label>Font Color</Label>
                 <div className="flex items-center space-x-4 mt-1">
-                  <Circle size={24} color={elementFontColor} className="shadow" />
+                  <Circle size={24} fill={elementFontColor} color={elementFontColor} className="shadow" />
                   <Button variant="outline" onClick={handleColorPickerToggle}>
                     Pick Color
                   </Button>
@@ -282,6 +302,40 @@ export default function TextSettingsPage() {
 
         <div>
           <div className="mb-6">
+            <h2 className="text-xl font-semibold mb-2">Template Preview</h2>
+            <div className="relative border rounded-lg overflow-hidden">
+              {templateImage ? (
+                <div className="relative">
+                  <img src={templateImage} alt="Certificate template" className="w-full h-auto" />
+                  <div className="absolute inset-0">
+                    {textElements.map((element) => (
+                      <div
+                        key={element.id} 
+                        style={getTextElementStyle(element)}
+                        className={`cursor-pointer ${selectedElementId === element.id ? 'ring-2 ring-blue-500 p-0.5' : ''}`}
+                        onClick={() => handleSelectElement(element.id)}
+                      >
+                        {element.text}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-gray-100 p-8 text-center">
+                  <p className="text-gray-500">No template selected. Please go back and select a template first.</p>
+                  <Button 
+                    variant="outline" 
+                    className="mt-2"
+                    onClick={() => navigate('/templates')}
+                  >
+                    Select Template
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mb-6">
             <h2 className="text-xl font-semibold mb-2">Text Elements</h2>
             <p className="text-gray-500">Manage and select text elements to customize</p>
             <Button onClick={handleAddTextElement} className="mt-4">Add Text Element</Button>
@@ -305,9 +359,14 @@ export default function TextSettingsPage() {
         </div>
       </div>
 
-      <Button onClick={handleNextClick}>
-        Next: Generate Template
-      </Button>
+      <div className="mt-8 flex justify-between">
+        <Button variant="outline" onClick={() => navigate('/templates')}>
+          Back to Templates
+        </Button>
+        <Button onClick={handleNextClick}>
+          Next: Generate Template
+        </Button>
+      </div>
       
       <ConfirmationModal
         isOpen={isConfirmModalOpen}
