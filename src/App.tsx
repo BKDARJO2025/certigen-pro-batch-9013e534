@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,74 +20,80 @@ import TemplateManagementPage from "./pages/admin/TemplateManagementPage";
 import AppSettingsPage from "./pages/admin/AppSettingsPage";
 import RecipientManagementPage from "./pages/admin/RecipientManagementPage";
 import AddRecipientPage from "./pages/admin/AddRecipientPage";
+import FontInitializer from "@/components/FontInitializer";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/app" element={
-              <ProtectedRoute>
-                <Index />
-              </ProtectedRoute>
-            } />
-            <Route path="/templates" element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <TemplatesPage />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/data-input" element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <DataInputPage />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/text-settings" element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <TextSettingsPage />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/export" element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <ExportPage />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/settings" element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <SettingsPage />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
+function App() {
+  return (
+    <>
+      <FontInitializer />
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/app" element={
+                  <ProtectedRoute>
+                    <Index />
+                  </ProtectedRoute>
+                } />
+                <Route path="/templates" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <TemplatesPage />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/data-input" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <DataInputPage />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/text-settings" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <TextSettingsPage />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/export" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <ExportPage />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/settings" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <SettingsPage />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
 
-            {/* Admin routes */}
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route path="users" element={<UserManagementPage />} />
-              <Route path="templates" element={<TemplateManagementPage />} />
-              <Route path="settings" element={<AppSettingsPage />} />
-              <Route path="recipients" element={<RecipientManagementPage />} />
-              <Route path="recipients/add" element={<AddRecipientPage />} />
-            </Route>
+                {/* Admin routes */}
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route path="users" element={<UserManagementPage />} />
+                  <Route path="templates" element={<TemplateManagementPage />} />
+                  <Route path="settings" element={<AppSettingsPage />} />
+                  <Route path="recipients" element={<RecipientManagementPage />} />
+                  <Route path="recipients/add" element={<AddRecipientPage />} />
+                </Route>
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </>
+  );
+}
 
 export default App;

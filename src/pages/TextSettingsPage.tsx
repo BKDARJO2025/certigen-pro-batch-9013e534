@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,12 +8,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Slider } from "@/components/ui/slider";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Circle, MoveHorizontal, MoveVertical, Type, Users } from 'lucide-react';
+import { Circle, MoveHorizontal, MoveVertical, Type, Users, Upload } from 'lucide-react';
 import { ChromePicker } from 'react-color';
 import { useSearchParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import { Switch } from "@/components/ui/switch";
+import FontUploader from "@/components/FontUploader";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface TextElement {
   id: string;
@@ -26,6 +28,18 @@ interface TextElement {
 }
 
 const defaultFont = "Arial";
+
+// Daftar font default dan kustom
+const defaultFonts = [
+  { name: "Arial", family: "Arial, sans-serif" },
+  { name: "Helvetica", family: "Helvetica, sans-serif" },
+  { name: "Times New Roman", family: "Times New Roman, serif" },
+  { name: "Courier New", family: "Courier New, monospace" },
+  { name: "Georgia", family: "Georgia, serif" },
+  { name: "Poppins", family: "Poppins, sans-serif" },
+  { name: "Magnolia Script", family: "Magnolia Script, cursive" },
+  { name: "Celandine", family: "Celandine, cursive" },
+];
 
 export default function TextSettingsPage() {
   const [textElements, setTextElements] = useState<TextElement[]>([]);
@@ -43,10 +57,18 @@ export default function TextSettingsPage() {
   const [isBulkEdit, setIsBulkEdit] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
-  const canvasRef = useState<HTMLDivElement | null>(null);
+  const [uploadedFonts, setUploadedFonts] = useState<{ name: string, family: string }[]>([]);
+  const [showFontUploader, setShowFontUploader] = useState(false);
+  const canvasRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Load user uploaded fonts if any
+    const storedFonts = localStorage.getItem("lovable.dev.uploadedFonts");
+    if (storedFonts) {
+      setUploadedFonts(JSON.parse(storedFonts));
+    }
+
     // Load the selected template from localStorage
     const template = localStorage.getItem("lovable.dev.currentTemplate");
     if (template) {
@@ -314,13 +336,18 @@ export default function TextSettingsPage() {
   }, [isDragging, selectedElementId]);
 
   const getTextElementStyle = (element: TextElement) => {
+    // Find the font family definition
+    const allFonts = [...defaultFonts, ...uploadedFonts];
+    const fontDef = allFonts.find(f => f.name === element.fontFamily);
+    const fontFamily = fontDef ? fontDef.family : element.fontFamily;
+
     return {
       position: 'absolute' as 'absolute',
       left: `${element.x}%`,
       top: `${element.y}%`,
       fontSize: `${element.fontSize}px`,
       color: element.fontColor,
-      fontFamily: element.fontFamily,
+      fontFamily: fontFamily,
       transform: 'translate(-50%, -50%)',
       cursor: isDragging && selectedElementId === element.id ? 'grabbing' : 'grab',
       userSelect: 'none' as 'none',
@@ -354,6 +381,15 @@ export default function TextSettingsPage() {
     setElementY(newY);
     updateElementProperty(selectedElementId, "x", newX);
     updateElementProperty(selectedElementId, "y", newY);
+  };
+
+  const handleFontUpload = (fontName: string, fontFamily: string) => {
+    const newFont = { name: fontName, family: fontFamily };
+    const updatedFonts = [...uploadedFonts, newFont];
+    setUploadedFonts(updatedFonts);
+    localStorage.setItem("lovable.dev.uploadedFonts", JSON.stringify(updatedFonts));
+    toast.success(`Font "${fontName}" successfully uploaded`);
+    setShowFontUploader(false);
   };
 
   return (
@@ -447,26 +483,65 @@ export default function TextSettingsPage() {
 
                 <div className="mb-4">
                   <Label htmlFor="fontFamily">Font Family</Label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className="w-full">
-                      <Input
-                        id="fontFamily"
-                        value={elementFontFamily}
-                        className="cursor-pointer"
-                        readOnly
-                      />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuLabel>Select Font</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => handleFontFamilyChange("Arial")}>Arial</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleFontFamilyChange("Helvetica")}>Helvetica</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleFontFamilyChange("Times New Roman")}>Times New Roman</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleFontFamilyChange("Courier New")}>Courier New</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleFontFamilyChange("Georgia")}>Georgia</DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleFontFamilyChange(defaultFont)}>Default Font</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex items-center gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className="w-full">
+                        <Input
+                          id="fontFamily"
+                          value={elementFontFamily}
+                          className="cursor-pointer"
+                          readOnly
+                        />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="max-h-56 overflow-y-auto">
+                        <DropdownMenuLabel>Select Font</DropdownMenuLabel>
+                        
+                        {/* Default Fonts Group */}
+                        <DropdownMenuLabel className="text-xs text-gray-500">Default Fonts</DropdownMenuLabel>
+                        {defaultFonts.map(font => (
+                          <DropdownMenuItem 
+                            key={font.name}
+                            onClick={() => handleFontFamilyChange(font.name)}
+                            className="cursor-pointer"
+                            style={{ fontFamily: font.family }}
+                          >
+                            {font.name}
+                          </DropdownMenuItem>
+                        ))}
+                        
+                        {uploadedFonts.length > 0 && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel className="text-xs text-gray-500">Uploaded Fonts</DropdownMenuLabel>
+                            {uploadedFonts.map(font => (
+                              <DropdownMenuItem 
+                                key={font.name}
+                                onClick={() => handleFontFamilyChange(font.name)}
+                                className="cursor-pointer"
+                                style={{ fontFamily: font.family }}
+                              >
+                                {font.name}
+                              </DropdownMenuItem>
+                            ))}
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    
+                    <Dialog open={showFontUploader} onOpenChange={setShowFontUploader}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="icon">
+                          <Upload className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Upload Custom Font</DialogTitle>
+                        </DialogHeader>
+                        <FontUploader onFontUploaded={handleFontUpload} />
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -535,6 +610,7 @@ export default function TextSettingsPage() {
               className="relative border rounded-lg overflow-hidden template-canvas" 
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
+              ref={canvasRef}
             >
               {templateImage ? (
                 <div className="relative">
@@ -594,6 +670,10 @@ export default function TextSettingsPage() {
                   <li className="flex items-start">
                     <span className="mr-2 bg-blue-100 text-blue-800 rounded-full w-5 h-5 flex items-center justify-center text-xs">5</span>
                     <span>Toggle "Bulk Edit" to apply changes to all text elements at once</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="mr-2 bg-blue-100 text-blue-800 rounded-full w-5 h-5 flex items-center justify-center text-xs">6</span>
+                    <span>Upload custom fonts using the upload button next to font selector</span>
                   </li>
                 </ul>
               </CardContent>

@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -73,6 +72,9 @@ export default {
 			fontFamily: {
 				montserrat: ['Montserrat', 'sans-serif'],
 				roboto: ['Roboto', 'sans-serif'],
+				poppins: ['Poppins', 'sans-serif'],
+				magnolia: ['Magnolia Script', 'cursive'],
+				celandine: ['Celandine', 'cursive'],
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
