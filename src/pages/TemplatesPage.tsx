@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { UploadCloud, X, ExternalLink, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import ConfirmationModal from "@/components/ConfirmationModal";
 
 interface SavedTemplate {
   id: string;
@@ -14,7 +14,6 @@ interface SavedTemplate {
   createdAt: string;
 }
 
-// Sample template images
 const sampleTemplates = [
   {
     id: "template-sample-1",
@@ -41,10 +40,10 @@ export default function TemplatesPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [savedTemplates, setSavedTemplates] = useState<SavedTemplate[]>([]);
   const [templateName, setTemplateName] = useState<string>("My Certificate Template");
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
-  // Load saved templates and current template
   useEffect(() => {
     const savedTemplate = localStorage.getItem("lovable.dev.currentTemplate");
     if (savedTemplate) {
@@ -53,14 +52,12 @@ export default function TemplatesPage() {
     
     const templates = localStorage.getItem("lovable.dev.savedTemplates");
     if (templates) {
-      // Check if the Sidoarjo template already exists in saved templates
       const parsedTemplates = JSON.parse(templates);
       const sidoarjoTemplateExists = parsedTemplates.some(
         (t: SavedTemplate) => t.name === "Sidoarjo Government Certificate"
       );
       
       if (!sidoarjoTemplateExists) {
-        // Add Sidoarjo template if it doesn't exist
         const updatedTemplates = [
           ...parsedTemplates, 
           {
@@ -76,11 +73,9 @@ export default function TemplatesPage() {
         setSavedTemplates(parsedTemplates);
       }
     } else {
-      // Initialize with sample templates if none exist
       localStorage.setItem("lovable.dev.savedTemplates", JSON.stringify(sampleTemplates));
       setSavedTemplates(sampleTemplates);
       
-      // Also save to templates collection for admin view
       const adminTemplates = sampleTemplates.map(template => ({
         id: template.id,
         name: template.name,
@@ -138,7 +133,6 @@ export default function TemplatesPage() {
         const imageData = e.target.result as string;
         setTemplateImage(imageData);
         
-        // Save to localStorage
         localStorage.setItem("lovable.dev.currentTemplate", imageData);
         toast.success("Template uploaded successfully!");
       }
@@ -175,7 +169,6 @@ export default function TemplatesPage() {
     setSavedTemplates(updatedTemplates);
     localStorage.setItem("lovable.dev.savedTemplates", JSON.stringify(updatedTemplates));
     
-    // Also save to templates collection for admin view
     const adminTemplates = localStorage.getItem("lovable.dev.templates");
     const parsedAdminTemplates = adminTemplates ? JSON.parse(adminTemplates) : [];
     const adminTemplate = {
@@ -201,7 +194,6 @@ export default function TemplatesPage() {
     setTemplateName(template.name);
     localStorage.setItem("lovable.dev.currentTemplate", template.image);
     
-    // Remove the template from saved templates
     const filteredTemplates = savedTemplates.filter(t => t.id !== template.id);
     setSavedTemplates(filteredTemplates);
     localStorage.setItem("lovable.dev.savedTemplates", JSON.stringify(filteredTemplates));
@@ -221,7 +213,7 @@ export default function TemplatesPage() {
       toast.error("Please upload or select a template first");
       return;
     }
-    navigate("/text-settings");
+    setIsConfirmModalOpen(true);
   };
 
   const goToTextSettings = () => {
@@ -230,6 +222,11 @@ export default function TemplatesPage() {
       return;
     }
     navigate("/text-settings");
+  };
+
+  const handleConfirmGeneration = () => {
+    setIsConfirmModalOpen(false);
+    navigate("/export");
   };
 
   return (
@@ -315,7 +312,7 @@ export default function TemplatesPage() {
                         Add Text Elements
                       </Button>
                       <Button onClick={goToDataInput}>
-                        Next: Text Settings
+                        Next: Generate Template
                       </Button>
                     </div>
                   </div>
@@ -443,6 +440,16 @@ export default function TemplatesPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={handleConfirmGeneration}
+        title="Generate Certificates"
+        description="Are you ready to generate the certificates with the current template and text settings?"
+        confirmText="Continue to Generation"
+        cancelText="Back to Text Settings"
+      />
     </div>
   );
 }

@@ -1,464 +1,323 @@
-
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Trash2, AlignLeft, AlignCenter, AlignRight, Bold, Italic } from "lucide-react";
-import Draggable from "react-draggable";
+import { Slider } from "@/components/ui/slider";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Circle } from 'lucide-react';
+import { ChromePicker } from 'react-color';
+import { useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import ConfirmationModal from "@/components/ConfirmationModal";
 
 interface TextElement {
   id: string;
-  content: string;
+  text: string;
   x: number;
   y: number;
   fontSize: number;
+  fontColor: string;
   fontFamily: string;
-  color: string;
-  type: "static" | "dynamic";
-  dynamicField?: "name" | "description" | "date";
-  fontWeight?: "normal" | "bold";
-  fontStyle?: "normal" | "italic";
-  alignment?: "left" | "center" | "right";
 }
 
-const fontFamilies = [
-  { value: "montserrat", label: "Montserrat" },
-  { value: "roboto", label: "Roboto" },
-  { value: "serif", label: "Serif" },
-  { value: "sans-serif", label: "Sans Serif" },
-  { value: "monospace", label: "Monospace" },
-  { value: "georgia", label: "Georgia" },
-  { value: "times", label: "Times New Roman" },
-  { value: "arial", label: "Arial" },
-];
-
-const fontSizes = Array.from({ length: 25 }, (_, i) => 12 + i * 2);
-
-// Professional text presets
-const textPresets = [
-  { id: "preset-1", name: "Certificate Title", content: "Certificate of Achievement", type: "static", fontSize: 42, fontFamily: "georgia", alignment: "center" },
-  { id: "preset-2", name: "Recipient Name", content: "[Recipient Name]", type: "dynamic", dynamicField: "name", fontSize: 36, fontFamily: "montserrat", alignment: "center" },
-  { id: "preset-3", name: "Description", content: "[Description]", type: "dynamic", dynamicField: "description", fontSize: 18, fontFamily: "serif", alignment: "center" },
-  { id: "preset-4", name: "Date", content: "[Current Date]", type: "dynamic", dynamicField: "date", fontSize: 16, fontFamily: "sans-serif", alignment: "center" },
-  { id: "preset-5", name: "Signature Line", content: "________________________", type: "static", fontSize: 24, fontFamily: "serif", alignment: "center" },
-  { id: "preset-6", name: "Signatory Title", content: "CEO & Founder", type: "static", fontSize: 16, fontFamily: "serif", alignment: "center" },
-];
+const defaultFont = "Arial";
 
 export default function TextSettingsPage() {
-  const [elements, setElements] = useState<TextElement[]>([]);
-  const [selectedElement, setSelectedElement] = useState<string | null>(null);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  
-  // Get template from localStorage
-  const [templateImage, setTemplateImage] = useState<string | null>(null);
-  
-  // Canvas ref for positioning
-  const canvasRef = useRef<HTMLDivElement>(null);
+  const [textElements, setTextElements] = useState<TextElement[]>([]);
+  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  const [elementText, setElementText] = useState<string>("");
+  const [elementX, setElementX] = useState<number>(50);
+  const [elementY, setElementY] = useState<number>(50);
+  const [elementFontSize, setElementFontSize] = useState<number>(16);
+  const [elementFontColor, setElementFontColor] = useState<string>("#000000");
+  const [elementFontFamily, setElementFontFamily] = useState<string>(defaultFont);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const navigate = useNavigate();
 
-  // Load template and any saved elements
   useEffect(() => {
-    const savedTemplate = localStorage.getItem("lovable.dev.currentTemplate");
-    if (savedTemplate) {
-      setTemplateImage(savedTemplate);
-      setImageLoaded(true);
-    }
-
-    // Load saved text elements if any
-    const savedElements = localStorage.getItem("lovable.dev.textElements");
-    if (savedElements) {
-      setElements(JSON.parse(savedElements));
-    } else if (canvasRef.current) {
-      // Add default professional elements if none exist
-      const defaultElements = textPresets.map((preset, index) => ({
-        id: Date.now() + index.toString(),
-        content: preset.content,
-        x: canvasRef.current.clientWidth / 2 - 150,
-        y: 100 + (index * 60),
-        fontSize: preset.fontSize,
-        fontFamily: preset.fontFamily,
-        color: "#000000",
-        type: preset.type as "static" | "dynamic",
-        dynamicField: preset.type === "dynamic" ? preset.dynamicField as "name" | "description" | "date" : undefined,
-        alignment: preset.alignment as "left" | "center" | "right",
-        fontWeight: "normal" as "normal" | "bold",
-        fontStyle: "normal" as "normal" | "italic",
-      }));
-      setElements(defaultElements);
+    const storedElements = localStorage.getItem("lovable.dev.textElements");
+    if (storedElements) {
+      setTextElements(JSON.parse(storedElements));
+    } else {
+      // Initialize with a default text element
+      const initialElement: TextElement = {
+        id: `text-${Date.now()}`,
+        text: "Sample Text",
+        x: 50,
+        y: 50,
+        fontSize: 24,
+        fontColor: "#000000",
+        fontFamily: defaultFont,
+      };
+      setTextElements([initialElement]);
+      localStorage.setItem("lovable.dev.textElements", JSON.stringify([initialElement]));
+      setSelectedElementId(initialElement.id);
+      setElementText(initialElement.text);
+      setElementX(initialElement.x);
+      setElementY(initialElement.y);
+      setElementFontSize(initialElement.fontSize);
+      setElementFontColor(initialElement.fontColor);
+      setElementFontFamily(initialElement.fontFamily);
     }
   }, []);
 
-  // Save elements to localStorage whenever they change
   useEffect(() => {
-    if (elements.length > 0) {
-      localStorage.setItem("lovable.dev.textElements", JSON.stringify(elements));
+    // Update selected element state when selectedElementId changes
+    if (selectedElementId) {
+      const selectedElement = textElements.find(element => element.id === selectedElementId);
+      if (selectedElement) {
+        setElementText(selectedElement.text);
+        setElementX(selectedElement.x);
+        setElementY(selectedElement.y);
+        setElementFontSize(selectedElement.fontSize);
+        setElementFontColor(selectedElement.fontColor);
+        setElementFontFamily(selectedElement.fontFamily);
+      }
     }
-  }, [elements]);
+  }, [selectedElementId, textElements]);
 
-  const handleAddElement = (type: "static" | "dynamic") => {
-    if (!canvasRef.current) return;
-
+  const handleAddTextElement = () => {
     const newElement: TextElement = {
-      id: Date.now().toString(),
-      content: type === "static" ? "Static Text" : "[Recipient Name]",
-      x: canvasRef.current.clientWidth / 2 - 100,
-      y: canvasRef.current.clientHeight / 2 - 20,
+      id: `text-${Date.now()}`,
+      text: "New Text",
+      x: 50,
+      y: 50,
       fontSize: 24,
-      fontFamily: "montserrat",
-      color: "#000000",
-      type,
-      dynamicField: type === "dynamic" ? "name" : undefined,
-      alignment: "left",
-      fontWeight: "normal",
-      fontStyle: "normal",
+      fontColor: "#000000",
+      fontFamily: defaultFont,
     };
-    
-    setElements([...elements, newElement]);
-    setSelectedElement(newElement.id);
-    toast.success(`${type === "static" ? "Static" : "Dynamic"} text element added`);
+
+    const updatedElements = [...textElements, newElement];
+    setTextElements(updatedElements);
+    localStorage.setItem("lovable.dev.textElements", JSON.stringify(updatedElements));
+    setSelectedElementId(newElement.id);
+    setElementText(newElement.text);
+    setElementX(newElement.x);
+    setElementY(newElement.y);
+    setElementFontSize(newElement.fontSize);
+    setElementFontColor(newElement.fontColor);
+    setElementFontFamily(newElement.fontFamily);
+    toast.success("New text element added");
   };
 
-  const handleAddPresetElement = (presetId: string) => {
-    if (!canvasRef.current) return;
-    
-    const preset = textPresets.find(p => p.id === presetId);
-    if (!preset) return;
-    
-    const newElement: TextElement = {
-      id: Date.now().toString(),
-      content: preset.content,
-      x: canvasRef.current.clientWidth / 2 - 150,
-      y: canvasRef.current.clientHeight / 2 - 20,
-      fontSize: preset.fontSize,
-      fontFamily: preset.fontFamily,
-      color: "#000000",
-      type: preset.type as "static" | "dynamic",
-      dynamicField: preset.type === "dynamic" ? preset.dynamicField as "name" | "description" | "date" : undefined,
-      alignment: preset.alignment as "left" | "center" | "right",
-      fontWeight: "normal",
-      fontStyle: "normal",
-    };
-    
-    setElements([...elements, newElement]);
-    setSelectedElement(newElement.id);
-    toast.success(`${preset.name} element added`);
-  };
-
-  const handleElementSelect = (id: string) => {
-    setSelectedElement(id);
-  };
-
-  const handleElementDelete = (id: string) => {
-    setElements(elements.filter(el => el.id !== id));
-    if (selectedElement === id) {
-      setSelectedElement(null);
+  const handleSelectElement = (id: string) => {
+    setSelectedElementId(id);
+    const selectedElement = textElements.find(element => element.id === id);
+    if (selectedElement) {
+      setElementText(selectedElement.text);
+      setElementX(selectedElement.x);
+      setElementY(selectedElement.y);
+      setElementFontSize(selectedElement.fontSize);
+      setElementFontColor(selectedElement.fontColor);
+      setElementFontFamily(selectedElement.fontFamily);
     }
-    toast("Text element removed");
   };
 
-  const handlePropertyChange = (property: keyof TextElement, value: any) => {
-    if (!selectedElement) return;
-    
-    setElements(elements.map(el => 
-      el.id === selectedElement ? { ...el, [property]: value } : el
-    ));
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setElementText(e.target.value);
+    updateElementProperty(selectedElementId, "text", e.target.value);
   };
 
-  const handleDragStop = (id: string, e: any, data: { x: number, y: number }) => {
-    setElements(elements.map(el => 
-      el.id === id ? { ...el, x: data.x, y: data.y } : el
-    ));
+  const handleXChange = (value: number) => {
+    setElementX(value);
+    updateElementProperty(selectedElementId, "x", value);
   };
 
-  // Get the currently selected element for the editor
-  const activeElement = selectedElement 
-    ? elements.find(el => el.id === selectedElement) 
-    : null;
+  const handleYChange = (value: number) => {
+    setElementY(value);
+    updateElementProperty(selectedElementId, "y", value);
+  };
 
-  // Style for text alignment
-  const getTextAlignStyle = (alignment?: string) => {
-    switch(alignment) {
-      case 'center': return { textAlign: 'center' as const, width: '100%' };
-      case 'right': return { textAlign: 'right' as const, width: '100%' };
-      default: return { textAlign: 'left' as const };
-    }
+  const handleFontSizeChange = (value: number) => {
+    setElementFontSize(value);
+    updateElementProperty(selectedElementId, "fontSize", value);
+  };
+
+  const handleFontColorChange = (color: string) => {
+    setElementFontColor(color);
+    updateElementProperty(selectedElementId, "fontColor", color);
+  };
+
+  const handleFontFamilyChange = (fontFamily: string) => {
+    setElementFontFamily(fontFamily);
+    updateElementProperty(selectedElementId, "fontFamily", fontFamily);
+  };
+
+  const updateElementProperty = (id: string | null, property: string, value: any) => {
+    if (!id) return;
+
+    setTextElements(prevElements => {
+      const updatedElements = prevElements.map(element => {
+        if (element.id === id) {
+          return { ...element, [property]: value };
+        }
+        return element;
+      });
+      localStorage.setItem("lovable.dev.textElements", JSON.stringify(updatedElements));
+      return updatedElements;
+    });
+  };
+
+  const handleColorPickerToggle = () => {
+    setShowColorPicker(!showColorPicker);
+  };
+
+  const handleColorChangeComplete = (color: any) => {
+    handleFontColorChange(color.hex);
+    setShowColorPicker(false);
+  };
+
+  const handleNextClick = () => {
+    setIsConfirmModalOpen(true);
+  };
+
+  const handleConfirmGeneration = () => {
+    setIsConfirmModalOpen(false);
+    navigate("/export");
   };
 
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Text Settings</h1>
-        <p className="text-gray-500 mt-1">Design and position text elements on your certificate</p>
+        <p className="text-gray-500 mt-1">Customize the text elements on your certificate template</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <Card className="mb-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div>
+          <Card>
             <CardContent className="p-6">
-              <div className="flex justify-between mb-4 flex-wrap gap-2">
-                <div className="space-x-2">
-                  <Button variant="outline" onClick={() => handleAddElement("static")}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Static Text
-                  </Button>
-                  <Button onClick={() => handleAddElement("dynamic")}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Dynamic Field
-                  </Button>
-                </div>
-                
-                <Select
-                  onValueChange={(value) => handleAddPresetElement(value)}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Add preset text" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {textPresets.map(preset => (
-                      <SelectItem key={preset.id} value={preset.id}>{preset.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="mb-4">
+                <Label htmlFor="text">Text</Label>
+                <Textarea
+                  id="text"
+                  placeholder="Enter text"
+                  value={elementText}
+                  onChange={handleTextChange}
+                  className="mt-1"
+                />
               </div>
-              
-              <div 
-                ref={canvasRef}
-                className="certificate-canvas bg-white rounded-lg border border-gray-300"
-                style={{ 
-                  width: "100%", 
-                  height: "500px",
-                  backgroundImage: templateImage ? `url(${templateImage})` : "none",
-                  backgroundSize: "contain",
-                  backgroundPosition: "center",
-                  backgroundRepeat: "no-repeat",
-                  position: "relative"
-                }}
-                onClick={() => setSelectedElement(null)}
-              >
-                {!templateImage && (
-                  <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                    No template selected. Please upload a template first.
+
+              <div className="mb-4">
+                <Label>Position</Label>
+                <div className="flex items-center space-x-4 mt-1">
+                  <div>
+                    <Label htmlFor="x">X:</Label>
+                    <Slider
+                      id="x"
+                      defaultValue={[elementX]}
+                      max={100}
+                      step={1}
+                      onValueChange={(value) => handleXChange(value[0])}
+                    />
                   </div>
-                )}
-                
-                {elements.map(element => (
-                  <Draggable
-                    key={element.id}
-                    defaultPosition={{ x: element.x, y: element.y }}
-                    onStop={(e, data) => handleDragStop(element.id, e, data)}
-                    bounds="parent"
-                  >
-                    <div
-                      className={`text-element cursor-move ${selectedElement === element.id ? 'ring-2 ring-certigen-blue p-1' : ''}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleElementSelect(element.id);
-                      }}
-                      style={{
-                        fontSize: `${element.fontSize}px`,
-                        fontFamily: element.fontFamily,
-                        color: element.color,
-                        fontWeight: element.fontWeight,
-                        fontStyle: element.fontStyle,
-                        position: 'absolute',
-                        ...getTextAlignStyle(element.alignment)
-                      }}
-                    >
-                      {element.content}
-                    </div>
-                  </Draggable>
-                ))}
+                  <div>
+                    <Label htmlFor="y">Y:</Label>
+                    <Slider
+                      id="y"
+                      defaultValue={[elementY]}
+                      max={100}
+                      step={1}
+                      onValueChange={(value) => handleYChange(value[0])}
+                    />
+                  </div>
+                </div>
               </div>
-              
-              <div className="mt-2 text-xs text-gray-500 text-center">
-                Click and drag to position text elements on the certificate
+
+              <div className="mb-4">
+                <Label htmlFor="fontSize">Font Size</Label>
+                <Slider
+                  id="fontSize"
+                  defaultValue={[elementFontSize]}
+                  max={100}
+                  step={1}
+                  onValueChange={(value) => handleFontSizeChange(value[0])}
+                />
+              </div>
+
+              <div className="mb-4">
+                <Label>Font Color</Label>
+                <div className="flex items-center space-x-4 mt-1">
+                  <Circle size={24} color={elementFontColor} className="shadow" />
+                  <Button variant="outline" onClick={handleColorPickerToggle}>
+                    Pick Color
+                  </Button>
+                  {showColorPicker && (
+                    <div className="absolute z-10 mt-2">
+                      <ChromePicker color={elementFontColor} onChangeComplete={handleColorChangeComplete} />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <Label htmlFor="fontFamily">Font Family</Label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="w-full">
+                    <Input
+                      id="fontFamily"
+                      value={elementFontFamily}
+                      className="cursor-pointer"
+                      readOnly
+                    />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuLabel>Select Font</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => handleFontFamilyChange("Arial")}>Arial</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleFontFamilyChange("Helvetica")}>Helvetica</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleFontFamilyChange("Times New Roman")}>Times New Roman</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleFontFamilyChange(defaultFont)}>Default Font</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </CardContent>
           </Card>
         </div>
 
         <div>
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold mb-2">Text Elements</h2>
+            <p className="text-gray-500">Manage and select text elements to customize</p>
+            <Button onClick={handleAddTextElement} className="mt-4">Add Text Element</Button>
+          </div>
+
           <Card>
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Text Properties</h3>
-              
-              {!activeElement ? (
-                <div className="text-center py-4 text-gray-500">
-                  <p>No text element selected</p>
-                  <p className="text-sm mt-1">Select an element from the canvas or add a new one</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Text Content</label>
-                    {activeElement.type === "static" ? (
-                      <Input 
-                        value={activeElement.content}
-                        onChange={(e) => handlePropertyChange("content", e.target.value)}
-                        placeholder="Enter text content"
-                      />
-                    ) : (
-                      <Select
-                        value={activeElement.dynamicField}
-                        onValueChange={(value) => {
-                          handlePropertyChange("dynamicField", value);
-                          let newContent = "[Recipient Name]";
-                          if (value === "description") newContent = "[Description]";
-                          if (value === "date") newContent = "[Current Date]";
-                          handlePropertyChange("content", newContent);
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select field" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="name">Recipient Name</SelectItem>
-                          <SelectItem value="description">Description</SelectItem>
-                          <SelectItem value="date">Current Date</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Font Family</label>
-                    <Select
-                      value={activeElement.fontFamily}
-                      onValueChange={(value) => handlePropertyChange("fontFamily", value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select font" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fontFamilies.map(font => (
-                          <SelectItem 
-                            key={font.value} 
-                            value={font.value}
-                            style={{ fontFamily: font.value }}
-                          >
-                            {font.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Font Size</label>
-                    <Select
-                      value={activeElement.fontSize.toString()}
-                      onValueChange={(value) => handlePropertyChange("fontSize", parseInt(value))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select size" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fontSizes.map(size => (
-                          <SelectItem key={size} value={size.toString()}>
-                            {size}px
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Text Color</label>
-                    <div className="flex">
-                      <Input
-                        type="color"
-                        value={activeElement.color}
-                        onChange={(e) => handlePropertyChange("color", e.target.value)}
-                        className="w-12 p-1 h-10"
-                      />
-                      <Input
-                        type="text"
-                        value={activeElement.color}
-                        onChange={(e) => handlePropertyChange("color", e.target.value)}
-                        className="flex-1 ml-2"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Alignment</label>
-                    <div className="flex space-x-2">
-                      <Button 
-                        type="button" 
-                        variant={activeElement.alignment === "left" ? "default" : "outline"}
-                        size="icon"
-                        onClick={() => handlePropertyChange("alignment", "left")}
-                      >
-                        <AlignLeft className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        type="button" 
-                        variant={activeElement.alignment === "center" ? "default" : "outline"}
-                        size="icon"
-                        onClick={() => handlePropertyChange("alignment", "center")}
-                      >
-                        <AlignCenter className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        type="button" 
-                        variant={activeElement.alignment === "right" ? "default" : "outline"}
-                        size="icon"
-                        onClick={() => handlePropertyChange("alignment", "right")}
-                      >
-                        <AlignRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Style</label>
-                    <div className="flex space-x-2">
-                      <Button 
-                        type="button" 
-                        variant={activeElement.fontWeight === "bold" ? "default" : "outline"}
-                        size="icon"
-                        onClick={() => handlePropertyChange("fontWeight", activeElement.fontWeight === "bold" ? "normal" : "bold")}
-                      >
-                        <Bold className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        type="button" 
-                        variant={activeElement.fontStyle === "italic" ? "default" : "outline"}
-                        size="icon"
-                        onClick={() => handlePropertyChange("fontStyle", activeElement.fontStyle === "italic" ? "normal" : "italic")}
-                      >
-                        <Italic className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <Button
-                    variant="destructive"
-                    className="w-full"
-                    onClick={() => handleElementDelete(activeElement.id)}
+              <ul>
+                {textElements.map(element => (
+                  <li
+                    key={element.id}
+                    className={`py-2 px-3 rounded-md cursor-pointer hover:bg-gray-100 ${selectedElementId === element.id ? 'bg-gray-200' : ''}`}
+                    onClick={() => handleSelectElement(element.id)}
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Element
-                  </Button>
-                </div>
-              )}
+                    {element.text}
+                  </li>
+                ))}
+              </ul>
             </CardContent>
           </Card>
-          
-          <div className="mt-4 flex justify-end">
-            <Button asChild>
-              <a href="/export">Next: Generate Certificates</a>
-            </Button>
-          </div>
         </div>
       </div>
+
+      <Button onClick={handleNextClick}>
+        Next: Generate Template
+      </Button>
+      
+      <ConfirmationModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={handleConfirmGeneration}
+        title="Generate Certificates"
+        description="Are you ready to generate the certificates with the current template and text settings?"
+        confirmText="Continue to Generation"
+        cancelText="Back to Text Settings"
+      />
     </div>
   );
 }
