@@ -21,18 +21,6 @@ export default function AppHeader() {
               <Link to="/" className="text-gray-600 hover:text-certigen-blue px-3 py-2 text-sm font-medium">
                 Home
               </Link>
-              <Link to="/templates" className="text-gray-600 hover:text-certigen-blue px-3 py-2 text-sm font-medium">
-                Templates
-              </Link>
-              <Link to="/data-input" className="text-gray-600 hover:text-certigen-blue px-3 py-2 text-sm font-medium">
-                Data
-              </Link>
-              <Link to="/text-settings" className="text-gray-600 hover:text-certigen-blue px-3 py-2 text-sm font-medium">
-                Text
-              </Link>
-              <Link to="/export" className="text-gray-600 hover:text-certigen-blue px-3 py-2 text-sm font-medium">
-                Export
-              </Link>
             </nav>
           )}
           <UserMenu />

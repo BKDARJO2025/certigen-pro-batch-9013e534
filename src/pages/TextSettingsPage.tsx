@@ -1,11 +1,12 @@
 
 import { useState, useEffect, useRef } from "react";
+import DraggableResizableText from "@/components/DraggableResizableText";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/use-toast";
 import { Slider } from "@/components/ui/slider";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Circle, MoveHorizontal, MoveVertical, Type, Users, Upload } from 'lucide-react';
@@ -16,16 +17,11 @@ import ConfirmationModal from "@/components/ConfirmationModal";
 import { Switch } from "@/components/ui/switch";
 import FontUploader from "@/components/FontUploader";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import CertificateCanvas from "@/components/CertificateCanvas";
+import { AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { TextElement } from '@/types';
 
-interface TextElement {
-  id: string;
-  text: string;
-  x: number;
-  y: number;
-  fontSize: number;
-  fontColor: string;
-  fontFamily: string;
-}
+
 
 const defaultFont = "Arial";
 
@@ -50,6 +46,7 @@ export default function TextSettingsPage() {
   const [elementFontSize, setElementFontSize] = useState<number>(16);
   const [elementFontColor, setElementFontColor] = useState<string>("#000000");
   const [elementFontFamily, setElementFontFamily] = useState<string>(defaultFont);
+  const [elementTextAlign, setElementTextAlign] = useState<CanvasTextAlign>('left');
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
@@ -88,6 +85,9 @@ export default function TextSettingsPage() {
         fontSize: 24,
         fontColor: "#000000",
         fontFamily: defaultFont,
+        width: 200,
+        height: 40,
+        textAlign: 'left'
       };
       setTextElements([initialElement]);
       localStorage.setItem("lovable.dev.textElements", JSON.stringify([initialElement]));
@@ -125,6 +125,9 @@ export default function TextSettingsPage() {
       fontSize: 24,
       fontColor: "#000000",
       fontFamily: defaultFont,
+      width: 200,
+      height: 40,
+      textAlign: 'left'
     };
 
     const updatedElements = [...textElements, newElement];
@@ -137,7 +140,10 @@ export default function TextSettingsPage() {
     setElementFontSize(newElement.fontSize);
     setElementFontColor(newElement.fontColor);
     setElementFontFamily(newElement.fontFamily);
-    toast.success("New text element added");
+    toast({
+      title: "Success",
+      description: "Text element added",
+    });
   };
 
   const handleSelectElement = (id: string) => {
@@ -150,6 +156,7 @@ export default function TextSettingsPage() {
       setElementFontSize(selectedElement.fontSize);
       setElementFontColor(selectedElement.fontColor);
       setElementFontFamily(selectedElement.fontFamily);
+      setElementTextAlign(selectedElement.textAlign);
     }
   };
 
@@ -161,7 +168,10 @@ export default function TextSettingsPage() {
     if (selectedElementId === id) {
       setSelectedElementId(updatedElements.length > 0 ? updatedElements[0].id : null);
     }
-    toast.success("Text element removed");
+    toast({
+      title: "Success",
+      description: "Text element removed",
+    });
   };
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -225,6 +235,22 @@ export default function TextSettingsPage() {
     } else {
       // Update only selected element
       updateElementProperty(selectedElementId, "fontFamily", fontFamily);
+    }
+  };
+
+  const handleTextAlignChange = (align: CanvasTextAlign) => {
+    setElementTextAlign(align);
+    if (isBulkEdit) {
+      // Update all text elements
+      const updatedElements = textElements.map(element => ({
+        ...element,
+        textAlign: align
+      }));
+      setTextElements(updatedElements);
+      localStorage.setItem("lovable.dev.textElements", JSON.stringify(updatedElements));
+    } else {
+      // Update only selected element
+      updateElementProperty(selectedElementId, "textAlign", align);
     }
   };
 
@@ -353,15 +379,16 @@ export default function TextSettingsPage() {
       userSelect: 'none' as 'none',
       padding: '4px',
       borderRadius: '4px',
+      textAlign: element.textAlign
     };
   };
 
   const moveElement = (direction: 'up' | 'down' | 'left' | 'right', amount: number = 1) => {
     if (!selectedElementId) return;
-    
+
     let newX = elementX;
     let newY = elementY;
-    
+
     switch (direction) {
       case 'up':
         newY = Math.max(0, elementY - amount);
@@ -376,7 +403,7 @@ export default function TextSettingsPage() {
         newX = Math.min(100, elementX + amount);
         break;
     }
-    
+
     setElementX(newX);
     setElementY(newY);
     updateElementProperty(selectedElementId, "x", newX);
@@ -388,8 +415,24 @@ export default function TextSettingsPage() {
     const updatedFonts = [...uploadedFonts, newFont];
     setUploadedFonts(updatedFonts);
     localStorage.setItem("lovable.dev.uploadedFonts", JSON.stringify(updatedFonts));
-    toast.success(`Font "${fontName}" successfully uploaded`);
+    toast({
+      title: "Success",
+      description: `Font "${fontName}" successfully uploaded`,
+    });
     setShowFontUploader(false);
+  };
+
+  const handleSaveComplete = () => {
+    // Save current template and text elements as the complete template
+    if (templateImage) {
+      localStorage.setItem("lovable.dev.savedTemplate", templateImage);
+      localStorage.setItem("lovable.dev.savedTextElements", JSON.stringify(textElements));
+      localStorage.setItem("lovable.dev.textElements", JSON.stringify(textElements));
+      toast({
+        title: "Success",
+        description: "Template saved as complete template",
+      });
+    }
   };
 
   return (
@@ -420,20 +463,50 @@ export default function TextSettingsPage() {
                   <Label htmlFor="text">Text</Label>
                   <Textarea
                     id="text"
-                    placeholder="Enter text"
                     value={elementText}
                     onChange={handleTextChange}
-                    className="mt-1"
+                    className="w-full min-h-[40px] resize-x min-w-[120px] max-w-full"
+                    style={{overflowWrap: 'break-word', wordBreak: 'break-word'}}
+                    rows={2}
+                    placeholder="Enter text..."
                   />
                 </div>
-
-                <div className="mb-4">
-                  <Label>Position Controls</Label>
-                  <div className="grid grid-cols-2 gap-2 mt-1">
-                    <Button variant="outline" onClick={() => moveElement('up')} className="flex items-center justify-center">
-                      <MoveVertical className="mr-2 h-4 w-4" />
-                      Move Up
-                    </Button>
+                <div className="space-y-4">
+                  {/* Text Alignment */}
+                  <div className="space-y-2">
+                    <Label>Text Alignment</Label>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant={elementTextAlign === 'left' ? 'default' : 'outline'}
+                        size="icon"
+                        onClick={() => {
+                          setElementTextAlign('left');
+                          updateElementProperty(selectedElementId, 'textAlign', 'left');
+                        }}
+                      >
+                        <AlignLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant={elementTextAlign === 'center' ? 'default' : 'outline'}
+                        size="icon"
+                        onClick={() => {
+                          setElementTextAlign('center');
+                          updateElementProperty(selectedElementId, 'textAlign', 'center');
+                        }}
+                      >
+                        <AlignCenter className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant={elementTextAlign === 'right' ? 'default' : 'outline'}
+                        size="icon"
+                        onClick={() => {
+                          setElementTextAlign('right');
+                          updateElementProperty(selectedElementId, 'textAlign', 'right');
+                        }}
+                      >
+                        <AlignRight className="h-4 w-4" />
+                      </Button>
+                    </div>
                     <Button variant="outline" onClick={() => moveElement('down')} className="flex items-center justify-center">
                       <MoveVertical className="mr-2 h-4 w-4 transform rotate-180" />
                       Move Down
@@ -606,41 +679,49 @@ export default function TextSettingsPage() {
         <div>
           <div className="mb-6">
             <h2 className="text-xl font-semibold mb-2">Template Preview</h2>
-            <div 
-              className="relative border rounded-lg overflow-hidden template-canvas" 
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              ref={canvasRef}
-            >
-              {templateImage ? (
-                <div className="relative">
-                  <img src={templateImage} alt="Certificate template" className="w-full h-auto" />
-                  <div className="absolute inset-0">
-                    {textElements.map((element) => (
-                      <div
-                        key={element.id} 
-                        style={getTextElementStyle(element)}
-                        className={`${selectedElementId === element.id ? 'ring-2 ring-blue-500' : ''}`}
-                        onMouseDown={(e) => handleMouseDown(e, element.id)}
-                      >
-                        {element.text}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-gray-100 p-8 text-center">
-                  <p className="text-gray-500">No template selected. Please go back and select a template first.</p>
-                  <Button 
-                    variant="outline" 
-                    className="mt-2"
+            {!templateImage ? (
+              <div className="bg-gray-100 p-8 text-center">
+                <p className="text-gray-500">No template selected. Please go back and select a template first.</p>
+                <div className="flex space-x-2 mb-4">
+                  <Button
+                    variant="outline"
+                    className="flex items-center"
                     onClick={() => navigate('/templates')}
                   >
                     Select Template
                   </Button>
+                  <Button
+                    variant="default"
+                    className="flex items-center"
+                    onClick={handleSaveComplete}
+                  >
+                    Save Template
+                  </Button>
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="mx-auto rounded-lg shadow max-w-full relative">
+                <div className="relative" ref={canvasRef}>
+                  <div className="relative w-full aspect-[1.414] mx-auto">
+                    <CertificateCanvas
+                      templateUrl={templateImage}
+                      name="Preview"
+                      textElements={textElements}
+                      onTextClick={handleSelectElement}
+                      onTextMove={(id, x, y) => {
+                        updateElementProperty(id, 'x', x);
+                        updateElementProperty(id, 'y', y);
+                      }}
+                      onTextResize={(id, width, height) => {
+                        updateElementProperty(id, 'width', width);
+                        updateElementProperty(id, 'height', height);
+                      }}
+                      selectedElementId={selectedElementId}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="mt-2 text-xs text-gray-500">
               <p>Click and drag text elements to position them on the template. Use the controls to make fine adjustments.</p>
             </div>
@@ -682,15 +763,20 @@ export default function TextSettingsPage() {
         </div>
       </div>
 
-      <div className="mt-8 flex justify-between">
+      <div className="mt-8 flex justify-between items-center">
         <Button variant="outline" onClick={() => navigate('/templates')}>
           Back to Templates
         </Button>
-        <Button onClick={handleNextClick}>
-          Next: Generate Template
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="default" onClick={handleSaveComplete}>
+            Save Complete Template
+          </Button>
+          <Button onClick={() => navigate('/certificate-preview')}>
+            Preview
+          </Button>
+        </div>
       </div>
-      
+
       <ConfirmationModal
         isOpen={isConfirmModalOpen}
         onClose={() => setIsConfirmModalOpen(false)}

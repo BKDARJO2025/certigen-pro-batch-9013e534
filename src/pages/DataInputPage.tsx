@@ -11,14 +11,16 @@ import { useNavigate } from "react-router-dom";
 import Papa from "papaparse";
 
 interface Recipient {
-  id: string;
+  no: string;
   name: string;
-  description?: string;
+  id: string;
+  email: string;
 }
 
 export default function DataInputPage() {
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [description, setDescription] = useState("");
   const [csvError, setCsvError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -39,6 +41,33 @@ export default function DataInputPage() {
   useEffect(() => {
     if (recipients.length > 0) {
       localStorage.setItem("lovable.dev.recipients", JSON.stringify(recipients));
+      // --- Tambahkan batch baru ke certigen.certificateBatches ---
+      const batchName = `Upload ${new Date().toLocaleString()}`;
+      const newBatch = {
+        id: `batch-${Date.now()}`,
+        name: batchName,
+        createdAt: new Date().toISOString(),
+        recipients: recipients.map(r => ({
+          id: r.id,
+          name: r.name,
+          email: r.email,
+          description: '',
+          status: 'pending',
+          emailSent: false
+        })),
+        status: 'not_sent'
+      };
+      // Ambil batch lama, tambahkan batch baru, simpan
+      let batches = [];
+      try {
+        const old = localStorage.getItem("certigen.certificateBatches");
+        if (old) batches = JSON.parse(old);
+      } catch {}
+      // Hindari duplikasi batch jika recipients tidak berubah
+      if (!batches.some((b:any) => b.createdAt === newBatch.createdAt && b.recipients.length === newBatch.recipients.length)) {
+        batches.push(newBatch);
+        localStorage.setItem("certigen.certificateBatches", JSON.stringify(batches));
+      }
     }
   }, [recipients]);
 
@@ -47,15 +76,19 @@ export default function DataInputPage() {
       toast.error("Please enter a name");
       return;
     }
-    
+    if (email.trim() === "") {
+      toast.error("Please enter an email");
+      return;
+    }
     const newRecipient: Recipient = {
-      id: Date.now().toString(),
+      no: (recipients.length + 1).toString(),
       name: name.trim(),
-      description: description.trim() || undefined
+      id: Date.now().toString(),
+      email: email.trim()
     };
-    
     setRecipients([...recipients, newRecipient]);
     setName("");
+    setEmail("");
     setDescription("");
     toast.success("Recipient added");
   };
@@ -67,36 +100,40 @@ export default function DataInputPage() {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCsvError(null);
-    
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      
       if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
         setCsvError("Please upload a valid CSV file");
         return;
       }
-      
       Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
           if (results.data && Array.isArray(results.data)) {
+            // Accept flexible casing for headers
+            const normalize = (str: string) => str.toLowerCase().replace(/\s+/g, '');
             const parsedRecipients = results.data
-              .filter((row: any) => row.name && row.name.trim() !== "")
-              .map((row: any) => ({
-                id: Date.now() + Math.random().toString(36).substr(2, 9),
-                name: row.name?.trim() || "",
-                description: row.description?.trim() || undefined
-              }));
-            
+              .map((row: any) => {
+                // Try to map possible header names
+                const no = row.no || row.No || row.NO || row["no"] || row["No"] || row["NO"] || row["No."] || row["no."] || '';
+                const name = row.nama || row.Nama || row.NAMA || row["nama"] || row["Nama"] || row["NAMA"] || '';
+                const id = row.id || row.ID || row.Id || row["id"] || row["ID"] || row["Id"] || '';
+                const email = row["email address"] || row["Email Address"] || row["email"] || row["Email"] || row["EMAIL"] || '';
+                return {
+                  no: no?.toString().trim() || '',
+                  name: name?.toString().trim() || '',
+                  id: id?.toString().trim() || '',
+                  email: email?.toString().trim() || ''
+                };
+              })
+              .filter((row: any) => row.name && row.id && row.email);
             if (parsedRecipients.length === 0) {
-              setCsvError("No valid recipients found in CSV");
+              setCsvError("No valid recipients found in CSV. Please use columns: no, nama, id, email address.");
               return;
             }
-            
             setRecipients([...recipients, ...parsedRecipients]);
             toast.success(`${parsedRecipients.length} recipients imported`);
-            
             if (results.errors.length > 0) {
               toast.warning(`${results.errors.length} rows had errors and were skipped`);
             }
@@ -120,7 +157,7 @@ export default function DataInputPage() {
   };
 
   const downloadSampleCsv = () => {
-    const csvContent = "name,description\nJohn Doe,Course Completion\nJane Smith,Excellence Award";
+    const csvContent = "no,nama,id,email address\n1,John Doe,12345,john@example.com\n2,Jane Smith,67890,jane@example.com";
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -163,6 +200,19 @@ export default function DataInputPage() {
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Enter recipient name"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="email" className="block text-sm font-medium mb-1">
+                        Email <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Enter recipient email"
+                        autoComplete="email"
                       />
                     </div>
                     
@@ -217,9 +267,9 @@ export default function DataInputPage() {
                     <div className="bg-certigen-gray p-4 rounded-lg text-sm">
                       <p className="font-medium mb-1">CSV Format Instructions:</p>
                       <ul className="list-disc list-inside space-y-1">
-                        <li>The CSV should have headers: 'name' and 'description'</li>
-                        <li>The 'name' field is required for each row</li>
-                        <li>The 'description' field is optional</li>
+                        <li>CSV headers must be: <b>no, nama, id, email address</b></li>
+                        <li>All columns are required for each row</li>
+                        <li>Example: 1, John Doe, 12345, john@example.com</li>
                       </ul>
                       <Button
                         variant="outline"
@@ -258,27 +308,37 @@ export default function DataInputPage() {
                   <p className="text-sm mt-1">Add recipients using the form on the left</p>
                 </div>
               ) : (
-                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
-                  {recipients.map((recipient) => (
-                    <div
-                      key={recipient.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
-                    >
-                      <div>
-                        <p className="font-medium">{recipient.name}</p>
-                        {recipient.description && (
-                          <p className="text-sm text-gray-500">{recipient.description}</p>
-                        )}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveRecipient(recipient.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">No</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nama</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email Address</th>
+                        <th className="px-4 py-2"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {recipients.map((recipient, idx) => (
+                        <tr key={recipient.id || recipient.email+recipient.id+recipient.no}>
+                          <td className="px-4 py-2 whitespace-nowrap">{recipient.no}</td>
+                          <td className="px-4 py-2 whitespace-nowrap">{recipient.name}</td>
+                          <td className="px-4 py-2 whitespace-nowrap">{recipient.id}</td>
+                          <td className="px-4 py-2 whitespace-nowrap">{recipient.email}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveRecipient(recipient.id || recipient.email+recipient.id+recipient.no)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </CardContent>

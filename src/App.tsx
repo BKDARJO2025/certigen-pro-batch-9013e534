@@ -8,7 +8,10 @@ import NotFound from "./pages/NotFound";
 import TemplatesPage from "./pages/TemplatesPage";
 import DataInputPage from "./pages/DataInputPage";
 import TextSettingsPage from "./pages/TextSettingsPage";
-import ExportPage from "./pages/ExportPage";
+import ExportPage from "@/pages/ExportPage";
+import CertificatePreviewPage from "@/pages/CertificatePreviewPage";
+import CertificatesPage from "@/pages/CertificatesPage";
+import WebsiteSettingsPage from "@/pages/WebsiteSettingsPage";
 import SettingsPage from "./pages/SettingsPage";
 import AppLayout from "./components/layout/AppLayout";
 import LandingPage from "./pages/LandingPage";
@@ -41,17 +44,17 @@ function App() {
                     <Index />
                   </ProtectedRoute>
                 } />
-                <Route path="/templates" element={
-                  <ProtectedRoute>
-                    <AppLayout>
-                      <TemplatesPage />
-                    </AppLayout>
-                  </ProtectedRoute>
-                } />
                 <Route path="/data-input" element={
                   <ProtectedRoute>
                     <AppLayout>
                       <DataInputPage />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/template-management" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <TemplateManagementPage />
                     </AppLayout>
                   </ProtectedRoute>
                 } />
@@ -62,10 +65,24 @@ function App() {
                     </AppLayout>
                   </ProtectedRoute>
                 } />
-                <Route path="/export" element={
+                <Route path="/certificate-preview" element={
                   <ProtectedRoute>
                     <AppLayout>
-                      <ExportPage />
+                      <CertificatePreviewPage />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/certificates" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <CertificatesPage />
+                    </AppLayout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/website-settings" element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <WebsiteSettingsPage />
                     </AppLayout>
                   </ProtectedRoute>
                 } />

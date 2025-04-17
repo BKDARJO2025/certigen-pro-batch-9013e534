@@ -17,24 +17,39 @@ export default function AppSidebar() {
   
   const adminNavItems = [
     {
-      name: "Users",
+      name: "Dashboard",
+      icon: <Menu className="w-5 h-5" />,
+      path: "/admin",
+    },
+    {
+      name: "Kelola Data Penerima",
       icon: <Users className="w-5 h-5" />,
-      path: "/admin/users",
+      path: "/data-input",
     },
     {
-      name: "Templates",
+      name: "Kelola Template Sertifikat",
       icon: <FileImage className="w-5 h-5" />,
-      path: "/admin/templates",
+      path: "/template-management",
     },
     {
-      name: "Recipients",
-      icon: <File className="w-5 h-5" />,
-      path: "/admin/recipients",
+      name: "Atur Teks Sertifikat",
+      icon: <Type className="w-5 h-5" />,
+      path: "/text-settings",
     },
     {
-      name: "Settings",
+      name: "Generate Sertifikat",
+      icon: <UploadCloud className="w-5 h-5" />,
+      path: "/certificate-preview",
+    },
+    {
+      name: "Export Sertifikat",
+      icon: <Download className="w-5 h-5" />,
+      path: "/certificates",
+    },
+    {
+      name: "Website Settings",
       icon: <Settings className="w-5 h-5" />,
-      path: "/admin/settings",
+      path: "/website-settings",
     },
   ];
 
